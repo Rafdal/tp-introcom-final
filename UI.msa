@@ -6,9 +6,10 @@
 
         p68h11
 
-	extern	push_L,push_R,str2int
+	extern	push_L,push_R
 
-	public	initdis,waitkey,outchar,println,clrdis,numForm
+	public	initdis,waitkey,outchar,println,clrdis
+	public	bitmap
 
 ******* Ports ***************************
 
@@ -39,156 +40,28 @@ COL3	equ	01110000b
 ****** Keyboard Mask ********************
 MASKOUT	equ	11110000b
 
-	rseg	CODE
 
 
 $str_hand.def			string handlers
 
+*-###################################################################
+*-	T O   D O	A R R E G L A R   C O N S T A N T E S
+*-###################################################################
+$const.def
 
-
-*************************************************************************
-*		# NOT FULLY TESTED #		WORK IN PROGRESS	*
-*************************************************************************
-*			NUM FORM			*
-*	     fomrulario de entrada numerica		*
-* Funcionamiento:					*
-*	Espera a que el usuario ingrese un valor y/o	*
-* presione una tecla de control.			*
-* Retorna con el valor ingresado (si corresponde) y con *
-* el ID de la tecla (status code) de control presionada.*
-*							*
-* Inputs:						*
-*	[AccA]: ultima operacion
-* 	[AccIY]: direc. mem. variable global display	*
-* Outputs:						*
-*	[AccB]: numero escrito				*
-*	[AccA]: status code				*
-* 							*
-* STATUS CODES:						*
-*	0 - sumar '+' 		AccB = valor ingresado	*
-*	1 - restar '-'		AccB = valor ingresado	*
-*	2 - CLEAR 		AccB = 0		*
-*	3 - dividir '/'		AccB = valor ingresado	*
-*	4 - multiplicar '*'	AccB = valor ingresado	*
-*	5 - IGUAL '='		AccB = valor ingresado	*
-*********************************************************
-* [ last Op] 0 <-(X)
-* [  cont  ] 1
-* [  X L   ]
-* [  X L   ]
-* [  PC H  ]
-* [  PC L  ]
-numForm	EQU	*
-	pshx
-	ldab	#2		cargo la cantidad maxima de caracteres en INPUT
-	pshb			creo dicha variable local
-	psha			guardo el valor de A
-	tsx
-	pshy
-	ldab	#2		cargo el offset para mostrar los numeros
-	aby			agrego el offset
-	
-
-***************** WIP ******************* (codigo enmendado)
-	ldaa	0,x		me fijo el codigo de la ultima operacion
-	cmpa	#2		comparo con codigo CLEAR
-	beq	ret		si no fue, voy a imprimir por pantalla
-	cmpa	#5		comparo con operacion 'igual' (=)[F] code=5
-	bne	break		si no fue, voy a imprimir por pantalla
-
-
-isNum0	jsr	waitkey
-	cmpa	#9		chequeo si esta en el rango 0-9 (numero)
-	bls	isNum0
-	clr	0,y		clear str
-	clr	1,y
-	
-	jsr	clrdis		clear display
-
-	suba	#10		quito el offset del ID de los numeros
-	bra	ret
-************** END WIP *******************
-
-loop	equ	*
-	jsr	waitkey		espero a recibir un ID de tecla. AccA = ID
-
-	cmpa	#9		chequeo si esta en el rango 0-9 (numero)
-	bls	isNum		si es un numero, lo analizo aparte
-
-*				si no es un numero, analizo el caracter de control
-	suba	#10		quitando el desface numerico del ID
-
-*****************
-* (AccA)	*
-*  [0] A (+)	*
-*  [1] B (-)	*
-*  [2] C (Clear)*
-*  [3] D (/)	*
-*  [4] E (*)	*
-*  [5] F (=)	*
-*****************
-
-	cmpa	#2
-	bne	ret_val		Si no es el boton Clear, retorno con valores
-
-**************** CLEAR BTN *********************
-	ldab	#2		cargo la cantidad max. de caracteres
-	cmpb	1,x		chequeo la cant. de caracteres usados
-	beq	clear		si ninguno esta usado, voy a clear y salgo de la subrutina
-	
-	ldaa	#' '		sino, agrego un espacio por izquierda
-	jsr	push_L		y borro el caracter de la derecha
-	inc	1,x		incremento la cantidad de caracteres disponibles
-	bra	break		e imprimo por pantalla
-
-
-***************** NUMBER ANALYSIS ***********
-isNum	equ	*		
-	tst	1,x		si la cantidad de caracteres disponibles
-	beq	break		es cero, salgo (no agrego nada)
-	adda	#'0'		Si no lo es, agrego el desfase ASCII del caracter
-	jsr	push_R		y lo agrego al vector
-	dec	1,x		decremento la cantidad de caracteres disponibles
-
-
-break	equ	*
-**************** PRINT ****************
-	ldaa	0,y		cargo los caracteres en memoria
-	ldab	#1		y los muestro por tantalla
-	jsr	outchar
-	ldaa	1,y
-	ldab	#0
-	jsr	outchar
-
-**************** END LOOP **************
-	jmp	loop		repetir*
-**************** END LOOP **************
-
-
-**************** CLEAR ********************
-*  Salgo de la subrutina y borro AccB
-clear	equ	*
-	ldab	#0
-	bra	ret
-
-************* RETURN VALUES *****************
-*  Salgo de la subrutina con retorno de valores
-ret_val	equ	*
-	jsr	str2int
-
-*********** RETORNO DE SUBRUTINA ***********
-ret	equ	*	
-	puly		recupero backup de Y
-	ins		libero 2 bytes del stack usado por variable local
-	ins
-	pulx		recupero backup de X
-	rts
+******************************************************************************
+* 
+*	Inicialización del Bitmap
+* 
+******************************************************************************
+	ORG	$5EFF
+	fcb	0			; indicamos que usaremos RGB
+	ORG	$5F00
+bitmap	rmb	COL*FIL*EL_SIZE		; Inicializo la matriz del bitmap
 
 
 
-
-
-
+	rseg	CODE
 
 
 

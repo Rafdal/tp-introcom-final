@@ -1,21 +1,12 @@
 	p68h11
 	
-	extern	initdis,_input,outchar,delay
+	extern	initdis,_input,outchar,delay,bitmap
 
 
 $const.def
 
 
-******************************************************************************
-*
-*	Inicialización del Bitmap
-*
-******************************************************************************
-	ORG	$5EFF
-RGB	fcb	0			; indicamos que usaremos RGB
-	
-	ORG	$5F00
-bitmap	rmb	COL*FIL*EL_SIZE		; Inicializo la matriz del bitmap
+
 
 **********************************************************************
 *

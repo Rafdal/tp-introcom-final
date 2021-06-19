@@ -1,6 +1,6 @@
 	p68h11
 
-	public	initdis,_input,convert,outchar
+	public	_input,convert
 
 ******* Ports ***************************
 
@@ -151,33 +151,6 @@ fincon	pula
 	rts
 
 
-
-**** Inicializa display (y teclado)******************
-*****************************************************
-
-initdis	equ	*
-	
-	psha
-	ldaa	#$0F       	; set for input/output
-	staa	DDRC      		; C output
-	ldaa	PIOC       	; get current value
-	anda	#$FE       	; reset bit 0 to 0
-	staa	PIOC       	; send it out
-	
-	pula
-	rts
-
-
-**************************************
-*Outchar: ACCA: Carácter a enviar
-*	    ACCB: Posición (0-3)
-**************************************
-outchar	equ	*
-	
-	stab	PORTCL     	; set the position 
-	staa	PORTB      	; set the character
-	
-	rts
 
 *************************************************************************************************************
 	END
