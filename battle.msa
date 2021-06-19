@@ -1,7 +1,7 @@
 	p68h11
 	
 	extern	initdis,_input,outchar,delay,bitmap
-
+	extern
 
 $const.def
 
@@ -141,42 +141,11 @@ azul3	ldaa	#AZUL
 	%RESTORE			; Restore
 	rts
 
-***************************************************************************************************************
-*
-*	ganador: Evalúa si uno de los jugadores ganó la partida, y en caso de ganar, procede a indicarlo en el 
-*		 display y en el bitmap.
-*		- Utiliza como parámetros las variables definidas al final del programa, que evalúan la cantidad
-*			de barcos hundidos de cada jugador
-*		- Devuelve el bit de Carry en 1 si hubo ganador, y en 0 si no hubo ganador aún.
-*
-***************************************************************************************************************
-ganador	equ	*
 
-	%BACKUP
 
-	ldaa	canhun1
-	cmpa	#CAN_BAR	; Comparo la cantidad de hundidos por los jugadores con #6 --> por ser el número de barcos 
-	beq	win1		; con los que se juega
-	ldaa	canhun2		; Si la cantidad de hundidos por el jugador 1 es 6, imprimimos la frase de felicitaciones al jugador 1
-	cmpa	#CAN_BAR	; Si la cantidad de hundidos por el jugador 2 es 6,
-	beq	win2		; Imprimimos la frase de felicitaciones al jugador 2
-	clc			; ponemos el carry en 0 si ningún jugador ganó.
-	bra	finwin		; Si ninguno de los jugadores alcanzó la cantidad de hundidos necesarios, salimos
 
-win1	equ	*
-	ldx	#winner1	; Cargamos en X la posición del primer caracter de la frase para el jugador 1
-	jsr	displ		; Imprimimos la frase y salimos
-	bra	fingana
-	
-win2	equ	*	
-	ldx	#winner2	; Cargamos en X la posición del primer caracter de la frase para el jugador 2
-	jsr	displ		; Imprimimos la frase y salimos
 
-fingana	jsr	espiral		; Imprimimos un efecto de espiral en el bitmap mostrando el jugador que ganó la partida
-	sec			; ponemos el carry en 1 indicando que un jugador ya ganó y salimos
-	
-finwin	%RESTORE
-	rts
+
 
 **************************************************************************************************************
 *
@@ -219,10 +188,10 @@ nop2	ldab	disp		; analizamos si hubo un disparo errado previo a la pulsación act
 	bne	nofire
 	jsr	disparo		; si lo fue, vamos a realizar el disparo
 	bra	salir		; salimos
-*___________________________________________________________________________________________________________________________
+*_______________________________________________________________________________________________________________
 *
 *	Como es un componenete de las coordenadas por no ser una de las teclas anteriores, llamo a la subrutina coordenadas			 
-*___________________________________________________________________________________________________________________________
+*_______________________________________________________________________________________________________________
 nofire	jsr	coord
 
 salir	clc			; pongo el carry en 0 indicando que no hubo reset
@@ -232,6 +201,12 @@ fineval	equ	*
 	%RESTORE		; Restauro los registros que guardé al comienzo
 
 	rts	
+
+
+
+
+
+
 
 **********************************************************************************************************************
 *
@@ -265,88 +240,22 @@ endsinr	ldaa	turn
 exit	%RESTORE
 	rts
 
-*************************************************************************************************************
-*
-*	_turno: cambia el turno al jugador correspondiente
-*		- Recibe por AccA la tecla presionada
-*		- Modifica la posición de memoria turn que contiene el turno actual.
-*
-**************************************************************************************************************
-_turno	equ	*
 
-	%BACKUP
 
-	ldab	turn		; analizamos de quién es el turno que apretó la tecla
-	cmpb	#1
-	bne	jug2
-*_____________________
+*####################################
+*-	T O    D O 
+*####################################
 *
-* Turno jugador 1
-*____________________
-jug1	ldab	disp
-	cmpb	#1
-	beq	fire1		; analizamos si hubo un disparo previo errado
-	cmpa	#P1_KEY		; analizo si la tecla apretada es P1_KEY
-	beq	tec1		; si es, se vuelve a elegir el jugador 1
-	bra	finturn		; si se apretó P2, salimos (no pasa nada)
-
-fire1	cmpa	#P2		; si hubo disparo y se apretó P2
-	beq	tec2		; cambiamos el turno al jugador 2
-	bra	finturn		; en caso contrario, salimos (no se repite el turno de P1)
-*____________________
+*	Revisar si meter en utils.msa y el problema de la cosntantes
 *
-* Turno jugador 2
-*____________________
-jug2	ldab	disp
-	cmpb	#1
-	beq	fire2		; analizamos si hubo un disparo previo errado
-	cmpa	#P2		; analizo si la tecla apretada es P2
-	beq	tec2		; si es, se vuelve a elegir el jugador 2
-	bra	finturn		; si se apretó P1_KEY, salimos (no pasa nada)
-
-fire2	cmpa	#P1_KEY		; si hubo disparo y se apretó P1_KEY
-	beq	tec1		; cambiamos el turno al jugador 1
-	bra	finturn		; en caso contrario, salimos (no se repite el turno de P2)
-
-*_______________________
-*
-* Cambio a jugador 1
-*_______________________
-tec1	ldaa	#1
-	staa	turn		; Indico en una posición de memoria que es el turno del jugador 1
-	ldx	#frase1		; mostramos la frase de jugador 1 en el display
-	jsr	displ
-	ldx	#play2		; cargamos en el bitmap el tablero del jugador 2
-	bra	change
-*_______________________
-*
-* Cambio a jugador 2
-*_______________________
-tec2	ldaa	#2
-	staa	turn		; Indico en una posición de memoria que es el turno del jugador 2
-	ldx	#frase2		; mostramos la frase de jugador 2
-	jsr	displ
-	ldx	#play1		; cargamos en el bitmap el tablero del jugador 1
-*_______________________________________________________________________________
-*
-* Copiamos la matriz del jugador siguiente y borramos las coordenadas ingresadas
-*________________________________________________________________________________
-change	jsr	copiado
-	clr	coor1
-	clr	coor2
-	clr	disp
-
-finturn	%RESTORE
-	
-	rts
-
-**************************************************************************************************************************
+*******************************************************************************************************************
 *
 * 	Subrutina copiado: Copia el contenido de una matriz a al Bitmap
 *		- Recibe por X la posición de incio del tablero por copiar
-*		- Hace uso de las constantes definidas en el programa para definir el tamaño de las matrices (FIL y COL)
+*		- Hace uso de las constantes definidas en el programa para definir el tamaño de las 
+*		matrices (FIL y COL)
 *
-**************************************************************************************************************************
+*******************************************************************************************************************
 copiado	equ	*
 	
 	%BACKUP
@@ -365,6 +274,9 @@ sgte	ldaa	0,X			; Copio el contenido de la celda apuntada a la celda destino
 	%RESTORE
 
 	rts
+
+
+
 
 ***************************************************************************************************************
 *
