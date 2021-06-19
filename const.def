@@ -91,3 +91,26 @@ TERM	equ	0		; Terminador de cada frase
 COL	equ	6			; Definición de constantes para inicialización de matrices
 FIL	equ	6
 EL_SIZE	equ	1
+
+
+
+
+
+
+**************************************************************************************************
+*
+*	Constantes para llenar los tableros.
+*		- Se debe completar el rotulo CAN_BAR con la cantidad de embarcaciones por jugador
+*		- Cada submarino ocupa 1 casilla
+*		- Cada carguero debe ocupar 2 casillas contiguas
+*		- Cada jugador puede colocar 1 TITANIC como máximo.
+*			Este debe ocupar 4 casillas. Estas 4 casillas pueden estar
+*			alineadas (4x1 o 1x4) o formando un cuadrado (2x2).
+*			Los jugadores deben ponerse de acuerdo en qué forma tendrán sus Titanics
+*
+*************************************************************************************************
+___	equ	00000000b		; representa el agua
+SUB	equ	01000000b		; representa un submarino
+CAR	equ	10000000b		; representa una casilla de carguero
+TIT	equ	11000000b		; representa una casilla de Titanic
+CAN_BAR	equ	6			; cantidad de barcos por jugador

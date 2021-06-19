@@ -1,8 +1,17 @@
 
 	p68h11
 
-	extern waitkey,_turno,ganador
+	extern waitkey
 
+	extern	disp,coor2,coor1,copiado,play1,play2
+	extern	displ,frase2,turn,frase1
+	extern	espiral,winner1,winner2
+	extern	canhun1,canhun2
+
+	public	_turno,ganador
+
+$const.def
+$macros.def
 
 ***************************************************************************************************************
 *
