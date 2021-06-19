@@ -1,0 +1,93 @@
+*************************************************************************
+*	CONSTANTES			const.def			*
+*************************************************************************
+
+***************************************************************
+*
+*	Definición de constantes para nombres de las teclas
+*
+***************************************************************
+P1_KEY	equ	$3
+P2	equ	$7
+FIREKEY	equ	$B
+RESET	equ	$F
+*______________________________________________________________
+*	Segmento 1 --> Valor de tecla = Valor de AccA + $A
+TA	equ	$0
+TB	equ	$1
+TC	equ	$2
+*______________________________________________________________
+*	Segmento 2 --> Valor de tecla = Valor de AccA + $9
+TD	equ	$4
+TE	equ	$5
+TF	equ	$6
+*______________________________________________________________
+*	Segmento 3 --> Valor de tecla = Valor de AccA - $7
+T1	equ	$8
+T2	equ	$9
+T3	equ	$A
+*______________________________________________________________
+*	Segmento 4 --> Valor de tecla = Valor de AccA - $8
+T4	equ	$C
+T5	equ	$D
+T6	equ	$E
+*______________________________________________________________
+
+****************************************************************************
+*
+*	Definición de constantes para el display y para el tiempo de delay
+*
+****************************************************************************
+FINDIS	EQU	0		; Constante de la posición de más a la derecha del display
+INIDIS	EQU	3		; Constante de la posición de más a la izquierda del display
+
+CICLOS	EQU	4		; Defino una constante con la cantidad de ciclos de 0,5 segundos para el delay
+
+**********************************************************************
+*
+*	Definición de constantes para identificar barcos y colores
+*
+**********************************************************************
+MASK	equ	11000000b	; Máscara para obtener sólo informacion sobre entidades presentes en celdas
+MASKCOL	equ	00111111b	; Máscara para obtener el color de una celda
+*_________________________________________________________________________
+*
+*	Equivalencias para colores utilizados
+*___________________________________________________________________________
+AZUL	equ	00000011b	
+AMAR	equ	00111100b
+ROJO	equ	00110000b
+VERDE	equ	00001100b
+NEGRO	equ	00000000b
+BLANCO	equ	00111111b
+ROJOC	equ	00110001b	; Rojo claro
+ROSAC	equ	00111010b	; Rosa claro
+*_________________________________________________________________________
+*
+*	Máscaras y equivalencias para barcos utilizados
+*___________________________________________________________________________
+SUBMAR	equ	01000000b
+CARGUER	equ	10000000b
+TITANIC	equ	11000000b
+TAMTIT	equ	4		; Cantidad de celdas que ocupa un Titanic
+CTOCADO	equ	10111100b	; Equivalencia para partes de un carguero tocado pero no hundido
+*_________________________________________________________________________
+*
+*	Equivalencias para las posiciones del bitmap
+*___________________________________________________________________________
+BITMAP	equ	$5F00
+FINMAP	equ	$5F23
+*_________________________________________________________________________
+*
+*	Equivalencias para las frases
+*___________________________________________________________________________
+TERM	equ	0		; Terminador de cada frase
+
+*******************************************************************************************
+*
+*	Definición de las matrices de los tableros de los jugadores y del Bitmap
+*
+*******************************************************************************************
+COL	equ	6			; Definición de constantes para inicialización de matrices
+FIL	equ	6
+EL_SIZE	equ	1

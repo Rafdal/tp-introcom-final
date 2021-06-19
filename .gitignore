@@ -6,6 +6,7 @@
 ## Handlers & defs
 !str_hand.def
 !flowctrl.def
+!const.def
 
 ## Modules
 !teclado1.msa
