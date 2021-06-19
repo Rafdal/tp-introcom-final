@@ -1,7 +1,6 @@
 	p68h11
 	
-	extern	initdis,_input,outchar,delay,bitmap
-	extern
+	extern	initdis,outchar,delay,bitmap,ganador,_turno,waitkey
 
 $const.def
 
@@ -64,19 +63,13 @@ inicio	jsr	clear			; borramos los espacios de memoria por utilizar
 	ldx	#frase1
 	jsr	displ			; imprimos en el display la frase que indica al usuario que es turno de jugador 1.
 
-teclado	jsr	_input			; analizamos el teclado
-	bcs	teclado			; si no se encontró una tecla presionada, volvemos a analizar el teclado
+teclado	jsr	waitkey			; esperamos que se presione el teclado
 	jsr	_eval			; si se presionó una tecla, se analiza qué tecla se presionó y cómo proseguir
 	bcs	inicio			; si se apretó reset y se confirmó, volvemos a empezar de 0
 	jsr	ganador			; analizamos si hubo un ganador
-	bcs	again			; en caso de haber ganador y de indicado por el display el mismo, vamos a reiniciar el juego
+	bcs	inicio			; en caso de haber ganador y de indicado por el display el mismo, vamos a reiniciar el juego
 	bra	teclado			; si no hubo ganador, volvemos a analizar el teclado
 
-again	jsr	_input			; analizamos el teclado, esperando un RESET
-	bcs	again
-	cmpa	#RESET			
-	bne	again			; de ser reset, volvemos a empezar de 0.
-	bra	inicio
 
 *****************************************************************************************
 * 
@@ -145,8 +138,6 @@ azul3	ldaa	#AZUL
 
 
 
-
-
 **************************************************************************************************************
 *
 *	_eval: evalúa qué tecla se apretó y a qué hacer según la tecla presionada.
@@ -190,7 +181,7 @@ nop2	ldab	disp		; analizamos si hubo un disparo errado previo a la pulsación act
 	bra	salir		; salimos
 *_______________________________________________________________________________________________________________
 *
-*	Como es un componenete de las coordenadas por no ser una de las teclas anteriores, llamo a la subrutina coordenadas			 
+*	Como es un componente de las coordenadas por no ser una de las teclas anteriores, llamo a la subrutina coordenadas			 
 *_______________________________________________________________________________________________________________
 nofire	jsr	coord
 
@@ -218,8 +209,7 @@ sireset equ	*
 	%BACKUP
 	ldx	#frase3		; Imprimimos en el display una frase que pide una confirmación para reiniciar
 	jsr	displ
-keyboar	jsr	_input		; Analizamos el teclado en busca de una pulsación
-	bcs	keyboar		; Si no se pulsó nada, volvemos a analizar
+keyboar	jsr	waitkey		; Esperamos a que se presione una tecla
 	cmpa	#RESET		
 	bne	endsinr		; Si la tecla pulsada no fue RESET, reanudamos el juego
 	sec			; Si se quiere hacer reset, seteamos el carry en 1 

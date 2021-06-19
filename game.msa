@@ -1,7 +1,7 @@
 
 	p68h11
 
-
+	extern waitkey,_turno,ganador
 
 
 ***************************************************************************************************************
@@ -37,17 +37,15 @@ win2	equ	*
 
 fingana	jsr	espiral		; Imprimimos un efecto de espiral en el bitmap mostrando el jugador que ganó la partida
 	sec			; ponemos el carry en 1 indicando que un jugador ya ganó y salimos
+
+again	jsr	waitkey		; analizamos el teclado, esperando un RESET
+	cmpa	#RESET			
+	bne	again		; de ser reset, volvemos a empezar de 0.
 	
 finwin	%RESTORE
+
+
 	rts
-
-
-
-
-
-
-
-
 
 
 
