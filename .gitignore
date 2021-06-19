@@ -8,6 +8,7 @@
 !flowctrl.def
 
 ## Modules
+!teclado1.msa
 !utils.msa
 !string.msa
 !game.msa

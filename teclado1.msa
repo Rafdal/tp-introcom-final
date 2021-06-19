@@ -1,0 +1,183 @@
+	p68h11
+
+	public	initdis,_input,convert,outchar
+
+******* Ports ***************************
+
+DDRC	equ	$1007       	; data direction register for C
+PIOC    equ	$1002       	; for strobe B assertion change
+PORTCL  equ 	$1005       	; port C latched
+PORTB   equ 	$1004		; port B
+PORTC	equ	$1003		; rows
+
+
+******* Cols and Row Ports **************
+
+ROWS	equ	PORTC     	; outputs
+COLS	equ	PORTCL    	; inputs
+
+***** Row and column Masks *************************
+
+FIL0	equ	00001110b  	; mascaras para manejo de filas
+FIL1	equ	00001101b
+FIL2	equ	00001011b
+FIL3	equ	00000111b
+
+COL0	equ	11100000b	; mascaras para manejo de columnas
+COL1	equ	11010000b
+COL2	equ	10110000b
+COL3	equ	01110000b	
+
+****** Keyboard Mask ********************
+MASKOUT	equ	11110000b
+
+
+
+	rseg	CODE
+
+*********************************************************************************************************
+*													*
+* Las siguientes subrutinas utilizan las constantes definidas anteriormente para poder funcionar	*
+*													*
+*********************************************************************************************************
+
+*******************************************************************************************************
+*
+*	_input: devuelve el valor númerico de la tecla presionada en el teclado
+*		por el registro A, para luego poder ser utilizada fácilmente como
+*		valor numérico.
+*		- Pone el carry en 1 si no encontró el número, y en 0 en caso de haberlo encontrado
+*
+*******************************************************************************************************
+_input	equ	*
+
+	pshb			; hago backup del registro B
+
+fi0	ldaa	#FIL0		; cargo la fila 0 con un 0
+	staa	PORTC
+	ldab	#0		; cargo B con el número de fila
+	jsr	convert
+	bcc	finin		; si se encontró el número, termino
+
+fi1	ldaa	#FIL1		; cargo la fila 1 con un 0
+	staa	PORTC
+	ldab	#1		; cargo B con el número de fila
+	jsr	convert
+	bcc	finin		; si se encontró el número, termino
+
+fi2	ldaa	#FIL2		; cargo la fila 2 con un 0
+	staa	PORTC
+	ldab	#2		; cargo B con el número de fila
+	jsr	convert
+	bcc	finin		; si se encontró el número, termino
+
+fi3	ldaa	#FIL3		; cargo la fila 3 con un 0
+	staa	PORTC
+	ldab	#3		; cargo B con el número de fila
+	jsr	convert
+	bcc	finin		; si se encontró el número, termino
+
+	sec			; si no encontró el número, pongo el carry en 1.
+	bra	endin
+
+finin	tba			; transfiero el valor de B con el número encontrado en A.
+	clc			; si encontró el número, pongo el carry en 0.
+
+endin	pulb			; recupero el registro B
+
+	rts
+
+
+
+*******************************************************************************************************
+*
+*	convert: dados un número de fila y el valor devuelto por el teclado en dicha fila
+*		devuelve el número apretado en el teclado en valor hexadecimal
+*		- Recibe por B el número de fila donde se lo encontró (0-3)
+*		- Devuelve por B el número apretado en el teclado en valor hexadecimal
+*		- Pone el carry en 1 si no encontró el número, y en 0 en caso de haberlo encontrado
+*
+*******************************************************************************************************
+convert	equ	*
+
+	psha
+
+	ldaa	#4
+	mul			; hago que B valga el menor número que aparece entre las teclas de la fila
+	
+	ldaa	PORTC		; leo el puerto C
+	anda	#MASKOUT	; hago una máscara para obtener sólo los 4 bits más significativos (columnas)
+	
+	cmpa	#MASKOUT
+	beq	sinnum		; de ser todos 1, no se apretó ninguna tecla, termino la subrutina
+
+	cmpa	#COL0		
+	bne	sig1		; si la tecla apretada no estaba en la columna 0, me fijo si fue en 1
+	ldaa	#0		; si fue en 0, cargo en A el valor numérico 0
+	bra	multi		; voy a calcular el número
+
+sig1	cmpa	#COL1		
+	bne	sig2		; si la tecla apretada no estaba en la columna 1, me fijo si fue en 2
+	ldaa	#1		; si fue un 1, cargo en A el valor numérico 1
+	bra	multi		; voy a calcular el número
+
+sig2	cmpa	#COL2
+	bne	sig3		; si la tecla apretada no estaba en la columna 2, debe estar en 3
+	ldaa	#2		; si fue un 2, cargo en A el valor numérico 2
+	bra	multi		; voy a calcular el número
+
+sig3	ldaa	#3		; en este punto la tecla apretada debe ser de la columna 3, por lo que cargo un 3 en A
+	bra	multi		; voy a calcular el número
+
+
+multi	aba			; le sumo al valor de A (la columna), el valor de B, que apuntaba a la primera columna.
+	tab			; devuelvo el valor en B
+
+	ldaa	PORTC
+	staa	PORTC		; actualizamos el puerto C para poder visualizar la tecla apretada
+	
+soltar	ldaa	PORTC		
+	anda	#MASKOUT	; esperamos a que se suelte la tecla para que el programa siga, y así poder mandar
+	cmpa	#MASKOUT	; un carácter por vez que se presiona la tecla
+	bne	soltar
+
+	clc	
+	bra	fincon		; pongo el carry en 0, indicando que encontré el número
+
+sinnum	sec			; pongo el carry en 1, indicando que no encontré el número
+
+fincon	pula
+
+	rts
+
+
+
+**** Inicializa display (y teclado)******************
+*****************************************************
+
+initdis	equ	*
+	
+	psha
+	ldaa	#$0F       	; set for input/output
+	staa	DDRC      		; C output
+	ldaa	PIOC       	; get current value
+	anda	#$FE       	; reset bit 0 to 0
+	staa	PIOC       	; send it out
+	
+	pula
+	rts
+
+
+**************************************
+*Outchar: ACCA: Carácter a enviar
+*	    ACCB: Posición (0-3)
+**************************************
+outchar	equ	*
+	
+	stab	PORTCL     	; set the position 
+	staa	PORTB      	; set the character
+	
+	rts
+
+*************************************************************************************************************
+	END

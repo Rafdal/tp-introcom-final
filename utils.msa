@@ -3,9 +3,57 @@
 *************************************************************************
 	p68h11
 
-	public	push_R,push_L
+	public	push_R,push_L,delay
 
 	rseg	CODE
+
+
+
+
+
+*********************************************************
+*		SUBRUTINA delay				*
+*							*
+* Esta subrutina genera un delay de aprox 0.5 - 1s para	*
+* simluador del wookie					*
+* No recibe ningún parámetro ni retorna valores, no 	*
+* hace falta liberar el stack depués de invocarla	*
+*********************************************************
+
+delay	equ	*
+	pshx			Hago backup de los registros	(4 ciclos)
+	pshy							(5 ciclos)
+	psha							(3 ciclos)
+	pshb							(3 ciclos)
+	ldaa	#18		Cargo la cantidad de repeticiones que haré con el loop1. (23 ciclos)
+*								[TOTAL:17]
+
+*	[LOOP1]: n recorridos del loop1 lleva n*(9+T) ciclos, siendo T los ciclos en total del loop2. 
+loop1	ldy	#$D900		Cargo la cantidad de repeticiones que haré con el loop2. (4 ciclos)
+
+* 	[LOOP2]: Un solo recorrido del loop2 lleva 9 ciclos, 55552 ($D900) recorridos del loop2 lleva 499968 ciclos
+loop2	nop			retardo 		(2 ciclos)
+	dey			decremento Y 		(4 ciclos)
+	bne	loop2		salto si no es cero 	(3 ciclos)
+*							[TOTAL:9]
+
+	deca			decremento A	(2 ciclos)
+	bne	loop1		si A!=0, repito (3 ciclos)
+
+
+	ldy	#$12		Retardo 			(5 ciclos)
+	pulb			Recupero el valor 		(4 ciclos)
+	pula			de los	registros		(4 ciclos)
+	puly							(6 ciclos)
+	pulx							(5 ciclos)
+	rts			Retorno de la rubrutina		(5 ciclos)
+*								[TOTAL:29]
+
+
+
+
+
+
 
 *************************************************************************
 *		# TESTED WORKING STABLE #	Sun 06  21:11		*

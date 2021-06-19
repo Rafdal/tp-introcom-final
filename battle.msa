@@ -1,0 +1,1247 @@
+	p68h11
+	
+	extern	initdis,_input,outchar,delay
+
+***************************************************************
+*
+*	Definición de constantes para nombres de las teclas
+*
+***************************************************************
+P1_KEY	equ	$3
+P2	equ	$7
+FIREKEY	equ	$B
+RESET	equ	$F
+*______________________________________________________________
+*	Segmento 1 --> Valor de tecla = Valor de AccA + $A
+TA	equ	$0
+TB	equ	$1
+TC	equ	$2
+*______________________________________________________________
+*	Segmento 2 --> Valor de tecla = Valor de AccA + $9
+TD	equ	$4
+TE	equ	$5
+TF	equ	$6
+*______________________________________________________________
+*	Segmento 3 --> Valor de tecla = Valor de AccA - $7
+T1	equ	$8
+T2	equ	$9
+T3	equ	$A
+*______________________________________________________________
+*	Segmento 4 --> Valor de tecla = Valor de AccA - $8
+T4	equ	$C
+T5	equ	$D
+T6	equ	$E
+*______________________________________________________________
+
+****************************************************************************
+*
+*	Definición de constantes para el display y para el tiempo de delay
+*
+****************************************************************************
+FINDIS	EQU	0		; Constante de la posición de más a la derecha del display
+INIDIS	EQU	3		; Constante de la posición de más a la izquierda del display
+
+CICLOS	EQU	4		; Defino una constante con la cantidad de ciclos de 0,5 segundos para el delay
+
+**********************************************************************
+*
+*	Definición de constantes para identificar barcos y colores
+*
+**********************************************************************
+MASK	equ	11000000b	; Máscara para obtener sólo informacion sobre entidades presentes en celdas
+MASKCOL	equ	00111111b	; Máscara para obtener el color de una celda
+*_________________________________________________________________________
+*
+*	Equivalencias para colores utilizados
+*___________________________________________________________________________
+AZUL	equ	00000011b	
+AMAR	equ	00111100b
+ROJO	equ	00110000b
+VERDE	equ	00001100b
+NEGRO	equ	00000000b
+BLANCO	equ	00111111b
+ROJOC	equ	00110001b	; Rojo claro
+ROSAC	equ	00111010b	; Rosa claro
+*_________________________________________________________________________
+*
+*	Máscaras y equivalencias para barcos utilizados
+*___________________________________________________________________________
+SUBMAR	equ	01000000b
+CARGUER	equ	10000000b
+TITANIC	equ	11000000b
+TAMTIT	equ	4		; Cantidad de celdas que ocupa un Titanic
+CTOCADO	equ	10111100b	; Equivalencia para partes de un carguero tocado pero no hundido
+*_________________________________________________________________________
+*
+*	Equivalencias para las posiciones del bitmap
+*___________________________________________________________________________
+BITMAP	equ	$5F00
+FINMAP	equ	$5F23
+*_________________________________________________________________________
+*
+*	Equivalencias para las frases
+*___________________________________________________________________________
+TERM	equ	0		; Terminador de cada frase
+
+*******************************************************************************************
+*
+*	Definición de las matrices de los tableros de los jugadores y del Bitmap
+*
+*******************************************************************************************
+COL	equ	6			; Definición de constantes para inicialización de matrices
+FIL	equ	6
+EL_SIZE	equ	1
+
+******************************************************************************
+*
+*	Inicialización del Bitmap
+*
+******************************************************************************
+	ORG	$5EFF
+RGB	fcb	0			; indicamos que usaremos RGB
+	
+	ORG	$5F00
+bitmap	rmb	COL*FIL*EL_SIZE		; Inicializo la matriz del bitmap
+
+**********************************************************************
+*
+*	Zona de definición de macros
+*
+**********************************************************************
+	MACRO	%BACKUP			; Hace backup de los todos los registros 
+	psha				; Macro mayormente utilizada por subrutinas
+	pshb
+	pshx
+	pshy
+	ENDMAC
+
+	MACRO	%RESTORE		; Restaura todos los registros del stack 
+	puly				; Macro mayormente utilizada por subrutinas
+	pulx
+	pulb
+	pula
+	ENDMAC
+	
+	MACRO	%COMTOC			; Compara el valor de una celda con un "carguero tocado"
+	ldaa	0,x			; y según el resultado, decide si hundir el barco analizado o no
+	cmpa	#CTOCADO	
+	beq	chundid
+	ENDMAC
+
+	MACRO	%POSIC
+	ldx	matgan			; cargo x con la posición inicial de la mat. ganadora
+	ldaa	fil_esp			; cargo AccA con la coordenada fila, dada en fil_esp
+	ldab	#COL*EL_SIZE
+	mul				
+	abx				; posiciono x en la celda inicial de la fila dada
+	ldab	col_esp			; cargo AccB con la coordenada columna, dada en col_esp
+	abx				; Posiciono X en la posición de la matriz con esas coordenadas.
+	ENDMAC
+
+*=====================================================================================================================================
+
+	rseg	CODE
+*==========================================================================================================
+*
+*	MAIN "BATALLA NAVAL"
+*
+*===========================================================================================================
+main	equ	*	
+	
+	lds	#stackp			; inicializamos el stack pointer
+	jsr	initdis			; inicializamos el teclado y display
+
+inicio	jsr	clear			; borramos los espacios de memoria por utilizar
+	jsr	limpio			; inicializamos el bitmap y las matrices de los jugadores poniéndo todas sus casillas en azul
+	
+	ldaa	#1			; indicamos al programa que es el turno del jugador 1 al comienzo de cada partida
+	staa	turn			; guardando en la variable "turn" el número 1
+	ldx	#frase1
+	jsr	displ			; imprimos en el display la frase que indica al usuario que es turno de jugador 1.
+
+teclado	jsr	_input			; analizamos el teclado
+	bcs	teclado			; si no se encontró una tecla presionada, volvemos a analizar el teclado
+	jsr	_eval			; si se presionó una tecla, se analiza qué tecla se presionó y cómo proseguir
+	bcs	inicio			; si se apretó reset y se confirmó, volvemos a empezar de 0
+	jsr	ganador			; analizamos si hubo un ganador
+	bcs	again			; en caso de haber ganador y de indicado por el display el mismo, vamos a reiniciar el juego
+	bra	teclado			; si no hubo ganador, volvemos a analizar el teclado
+
+again	jsr	_input			; analizamos el teclado, esperando un RESET
+	bcs	again
+	cmpa	#RESET			
+	bne	again			; de ser reset, volvemos a empezar de 0.
+	bra	inicio
+
+*****************************************************************************************
+* 
+*	Clear: vacía todas las posiciones de memoria utilizadas para almacenar variables
+* 
+*****************************************************************************************
+clear	equ	*
+
+	clr	coor1
+	clr	coor2
+	clr	turn
+	clr	disp
+	clr	titan1
+	clr	titan2
+	clr	canhun1	
+	clr	canhun2		; vaciamos la memoria
+	jsr	clrdis		; vaciamos el display
+	
+	rts
+
+******************************************************************************************************
+* 
+*	limpio: pone en azul todas las posiciones de los tableros y el bitmap
+*		- Usa como parámetros las posiciones de las matrices, cuyos rótulos fueron definidos.
+* 
+*******************************************************************************************************
+limpio	equ	* 
+
+	%BACKUP				; Backups
+
+	ldx	#play1			; cargo en el registro y el tablero de player 1
+	ldab	#COL*FIL*EL_SIZE	; inicio un contador del tamaño de la matriz
+	
+azul1	ldaa	0,x			; cargo el contenido del elemento de la matriz
+	anda	#MASK			; mantengo los 2 primeros bits que indican el tipo de barco
+	oraa	#AZUL			; cambio el color a azul
+	staa	0,x			; lo imprimo en el tablero de player 1
+	inx
+	decb				; Decremento el contador
+	bne	azul1			; repito hasta que el contador sea 0
+
+	ldx	#play2
+	ldab	#COL*FIL*EL_SIZE	; inicio un contador del tamaño de la matriz
+
+azul2	ldaa	0,x
+	anda	#MASK			; mantengo los 2 primeros bits que indican el tipo de barco
+	oraa	#AZUL			; cambio el color a azul
+	staa	0,x			; lo imprimo en el tablero de player 2
+	inx
+	decb
+	bne	azul2
+
+	ldx	#bitmap
+	ldab	#COL*FIL*EL_SIZE	; inicio un contador del tamaño de la matriz
+
+azul3	ldaa	#AZUL
+	staa	0,x
+	inx
+	decb
+	bne	azul3
+
+	%RESTORE			; Restore
+	rts
+
+***************************************************************************************************************
+*
+*	ganador: Evalúa si uno de los jugadores ganó la partida, y en caso de ganar, procede a indicarlo en el 
+*		 display y en el bitmap.
+*		- Utiliza como parámetros las variables definidas al final del programa, que evalúan la cantidad
+*			de barcos hundidos de cada jugador
+*		- Devuelve el bit de Carry en 1 si hubo ganador, y en 0 si no hubo ganador aún.
+*
+***************************************************************************************************************
+ganador	equ	*
+
+	%BACKUP
+
+	ldaa	canhun1
+	cmpa	#CAN_BAR	; Comparo la cantidad de hundidos por los jugadores con #6 --> por ser el número de barcos 
+	beq	win1		; con los que se juega
+	ldaa	canhun2		; Si la cantidad de hundidos por el jugador 1 es 6, imprimimos la frase de felicitaciones al jugador 1
+	cmpa	#CAN_BAR	; Si la cantidad de hundidos por el jugador 2 es 6,
+	beq	win2		; Imprimimos la frase de felicitaciones al jugador 2
+	clc			; ponemos el carry en 0 si ningún jugador ganó.
+	bra	finwin		; Si ninguno de los jugadores alcanzó la cantidad de hundidos necesarios, salimos
+
+win1	equ	*
+	ldx	#winner1	; Cargamos en X la posición del primer caracter de la frase para el jugador 1
+	jsr	displ		; Imprimimos la frase y salimos
+	bra	fingana
+	
+win2	equ	*	
+	ldx	#winner2	; Cargamos en X la posición del primer caracter de la frase para el jugador 2
+	jsr	displ		; Imprimimos la frase y salimos
+
+fingana	jsr	espiral		; Imprimimos un efecto de espiral en el bitmap mostrando el jugador que ganó la partida
+	sec			; ponemos el carry en 1 indicando que un jugador ya ganó y salimos
+	
+finwin	%RESTORE
+	rts
+
+**************************************************************************************************************
+*
+*	_eval: evalúa qué tecla se apretó y a qué hacer según la tecla presionada.
+*		- Recibe por A el valor numérico de la tecla presionada en el teclado, y utiliza
+*			las equivalencias definidas como constantes al principio para poder indentificar la tecla.
+*		- Devuelve el carry en 1 si se confirmó el RESET, o en 0 si no hubo RESET.
+*
+***************************************************************************************************************
+_eval	equ	*
+
+	%BACKUP			; Hago backup de los registros
+*_____________________________________________________________________________________________________________
+*
+*	Zona de comparación con teclas especiales.
+*		En caso de que la tecla presionada sea una especial, se salta a la subrutina correspondiente
+*		a esa tecla.
+*______________________________________________________________________________________________________________
+	cmpa	#RESET		; analizamos si la tecla preisonada fue RESET
+	bne	noreset
+	jsr	sireset		; si lo fue, vamos a realizar el RESET
+	bcs	fineval		; si se confirma el RESET, salimos con el carry en 1.
+	bra	salir		; si no se confirma, salimos.
+	
+noreset	cmpa	#P1_KEY		; analizamos si la tecla presionada fue P1_KEY
+	bne	nop1		
+	jsr	_turno		; si lo fue, vamos al proceso de cambiar el turno
+	bra	salir		; salimos
+
+nop1	cmpa	#P2		; analizamos si la tecla preisonada fue P2
+	bne	nop2
+	jsr	_turno		; si lo fue, vamos al proceso de cambiar el turno
+	bra	salir		; salimos
+
+nop2	ldab	disp		; analizamos si hubo un disparo errado previo a la pulsación actual.
+	cmpb	#1	
+	beq	salir		; si hubo, salimos y analizamos la tecla presionada, ya que se debió presionar P1_KEY, P2 o RESET
+	
+	cmpa	#FIREKEY		; analizamos si la tecla preisonada fue FIREKEY
+	bne	nofire
+	jsr	disparo		; si lo fue, vamos a realizar el disparo
+	bra	salir		; salimos
+*___________________________________________________________________________________________________________________________
+*
+*	Como es un componenete de las coordenadas por no ser una de las teclas anteriores, llamo a la subrutina coordenadas			 
+*___________________________________________________________________________________________________________________________
+nofire	jsr	coord
+
+salir	clc			; pongo el carry en 0 indicando que no hubo reset
+
+fineval	equ	*
+
+	%RESTORE		; Restauro los registros que guardé al comienzo
+
+	rts	
+
+**********************************************************************************************************************
+*
+*	sireset: subrutina que comienza de nuevo el juego en caso de que el usuario realice una confirmación de RESET
+*		- Devuelve el carry en 1 si se confirmó el RESET, y en 0 si se apretó cualquier otra tecla.
+*
+**********************************************************************************************************************
+sireset equ	*
+	%BACKUP
+	ldx	#frase3		; Imprimimos en el display una frase que pide una confirmación para reiniciar
+	jsr	displ
+keyboar	jsr	_input		; Analizamos el teclado en busca de una pulsación
+	bcs	keyboar		; Si no se pulsó nada, volvemos a analizar
+	cmpa	#RESET		
+	bne	endsinr		; Si la tecla pulsada no fue RESET, reanudamos el juego
+	sec			; Si se quiere hacer reset, seteamos el carry en 1 
+	bra	exit		
+*___________________________________________________________
+*
+*	Zona donde no se confirma el reinicio del juego					 
+*___________________________________________________________
+endsinr	ldaa	turn				
+	ldab	#$30
+	aba			; pasamos a carácter ASCII el turno del jugador
+	ldab	#3
+	jsr	outchar		; Imprimo en la posición de más a la izquierda del display el turno para dejar todo
+*	...			; como estaba antes de presionar reset
+	clr	coor1		; Limpiamos las posiciones de memoria de las coordenadas
+	clr	coor2
+	clc			; Seteamos el carry en 0 indicando que no se confirmó el reinicio.
+exit	%RESTORE
+	rts
+
+*************************************************************************************************************
+*
+*	_turno: cambia el turno al jugador correspondiente
+*		- Recibe por AccA la tecla presionada
+*		- Modifica la posición de memoria turn que contiene el turno actual.
+*
+**************************************************************************************************************
+_turno	equ	*
+
+	%BACKUP
+
+	ldab	turn		; analizamos de quién es el turno que apretó la tecla
+	cmpb	#1
+	bne	jug2
+*_____________________
+*
+* Turno jugador 1
+*____________________
+jug1	ldab	disp
+	cmpb	#1
+	beq	fire1		; analizamos si hubo un disparo previo errado
+	cmpa	#P1_KEY		; analizo si la tecla apretada es P1_KEY
+	beq	tec1		; si es, se vuelve a elegir el jugador 1
+	bra	finturn		; si se apretó P2, salimos (no pasa nada)
+
+fire1	cmpa	#P2		; si hubo disparo y se apretó P2
+	beq	tec2		; cambiamos el turno al jugador 2
+	bra	finturn		; en caso contrario, salimos (no se repite el turno de P1)
+*____________________
+*
+* Turno jugador 2
+*____________________
+jug2	ldab	disp
+	cmpb	#1
+	beq	fire2		; analizamos si hubo un disparo previo errado
+	cmpa	#P2		; analizo si la tecla apretada es P2
+	beq	tec2		; si es, se vuelve a elegir el jugador 2
+	bra	finturn		; si se apretó P1_KEY, salimos (no pasa nada)
+
+fire2	cmpa	#P1_KEY		; si hubo disparo y se apretó P1_KEY
+	beq	tec1		; cambiamos el turno al jugador 1
+	bra	finturn		; en caso contrario, salimos (no se repite el turno de P2)
+
+*_______________________
+*
+* Cambio a jugador 1
+*_______________________
+tec1	ldaa	#1
+	staa	turn		; Indico en una posición de memoria que es el turno del jugador 1
+	ldx	#frase1		; mostramos la frase de jugador 1 en el display
+	jsr	displ
+	ldx	#play2		; cargamos en el bitmap el tablero del jugador 2
+	bra	change
+*_______________________
+*
+* Cambio a jugador 2
+*_______________________
+tec2	ldaa	#2
+	staa	turn		; Indico en una posición de memoria que es el turno del jugador 2
+	ldx	#frase2		; mostramos la frase de jugador 2
+	jsr	displ
+	ldx	#play1		; cargamos en el bitmap el tablero del jugador 1
+*_______________________________________________________________________________
+*
+* Copiamos la matriz del jugador siguiente y borramos las coordenadas ingresadas
+*________________________________________________________________________________
+change	jsr	copiado
+	clr	coor1
+	clr	coor2
+	clr	disp
+
+finturn	%RESTORE
+	
+	rts
+
+**************************************************************************************************************************
+*
+* 	Subrutina copiado: Copia el contenido de una matriz a al Bitmap
+*		- Recibe por X la posición de incio del tablero por copiar
+*		- Hace uso de las constantes definidas en el programa para definir el tamaño de las matrices (FIL y COL)
+*
+**************************************************************************************************************************
+copiado	equ	*
+	
+	%BACKUP
+	
+	ldy	#bitmap			; Cargo en Y la primer celda de la matriz destino
+	ldab	#FIL*COL*EL_SIZE	; Defino un contador de la cantidad de valores a copiar
+
+sgte	ldaa	0,X			; Copio el contenido de la celda apuntada a la celda destino 
+	staa	0,Y			; correspondiente.
+	
+	inx				; Apunto a las siguientes celdas de origen y destino
+	iny				
+	decb				; Decremento el contador y compruebo si terminé
+	bne	sgte
+
+	%RESTORE
+
+	rts
+
+***************************************************************************************************************
+*
+*	Subrutina "coord": Guarda en posiciones de memoria distintas las coordenadas ingresadas en el teclado
+*		- Recibe por AccA el valor de la tecla presionada (valor original del teclado)
+*		- Asigna a la tecla presionada un nuevo valor y la guarda en la posición de memoria correspondiente
+*		- Devuelve por posiciones de memoria establecidas en el main el valor de la coordenada presionada.
+*
+***************************************************************************************************************
+coord	equ	*
+	
+	%BACKUP			; Hago backup de todos los registros
+	
+	cmpa	#$6		; Comparo con 6 (número más alto en la tabla de equivalencias)
+	bhi	numero		; para saber si es un Número o una letra
+
+	ldab	coor1		; Si la coordenada ingresada ya tiene algo, salgo para no sobreescribirla
+	bne	endcoor
+
+	cmpa	#$2		; Como las asignaciones de teclas no son consecutivas, debemos evaluar a qué 
+	bhi	sgment2		; segmento pertenece.
+*_________________________
+*
+* Si es una letra (fila)
+*_________________________
+sgment1	ldab	#$A		; convertimos la tecla apretada en el número de fila
+	aba			; Realizo una operación con el valor correspondiente al segmento al que pertenece
+	staa	coor1		; Como es una letra, la guardamos en la coordenada 1
+	bra	prt_let		; Luego de guardar la coordenada, salgo
+
+sgment2	ldab	#$9		; convertimos la tecla apretada en el número de fila
+	aba			
+	staa	coor1		; la guardamos en la coordenada 1
+
+prt_let	equ	*
+	ldab	#55		; convertimos la letra presionada a caracter ASCII
+	aba
+	ldab	#1		; la imprimimos en el display
+	jsr	outchar
+	bra	endcoor		; salimos
+*____________________________
+*
+* Si es un número (columna)
+*____________________________
+
+numero	ldab	coor2		; Si la coordenada ingresada ya tiene algo, salgo para no sobreescribirla
+	bne	endcoor
+	
+	cmpa	#$A		; Como las asignaciones de teclas no son consecutivas, debemos evaluar a qué
+	bhi	sgment4		; segmento pertenece.
+
+sgment3	ldab	#7		; convertimos el valor del teclado al valor numérico de la columna
+	sba
+	staa	coor2		; lo guardamos en la coordenada 2
+	bra	prt_num
+	
+sgment4	ldab	#8		; convertimos el valor del teclado al valor numérico de la columna
+	sba	
+	staa	coor2		; lo guardamos en la coordenada 2
+
+prt_num	equ	*
+	ldab	#$30		; convertimos el número a su carácter ASCII
+	aba
+	clrb
+	jsr	outchar		; lo imprimimos en la posición de más a la derecha del display
+	
+endcoor	equ	*
+	
+	%RESTORE		; Restauro los registros
+
+	rts			; Salimos de la subrutina
+
+*********************************************************************************************
+*
+*	Subrutina disparo: Se la llama cuando un jugador presiona FIREKEY! para realizar un 
+*			   disparo a las coordenadas ingresadas
+*		- Recibe por coor1 y coor2 (variables) las coordenadas a las que se apuntó
+*		- Modifica una celda de la matriz del jugador contrario al de turno cuando 
+*		  se realiza un disparo
+*
+**********************************************************************************************
+disparo	equ	*
+	
+	%BACKUP
+	
+	ldaa	turn		; Evaluamos qué jugador tiene el turno de jugar
+	cmpa	#1		; y posicionamos X en el tablero del jugador contrario
+	beq	player1
+
+player2	equ	*
+	ldx	#play1		
+	bra	shot
+	
+player1	equ	*
+	ldx	#play2	
+		
+shot	equ	*
+	pshx			; Guardo en el stack la posición de la primera celda de la matriz analizada para usarla luego
+	ldaa	coor1
+	ldab	#$A		; Hago que la coordenada 1 pase a ser un número de 0 a 5
+	sba			; restandole la menor coordenada posible
+	ldab	#COL*EL_SIZE	
+	mul	
+	abx			; Me posiciono en la fila correspondiente a la coordenada 1
+	ldab	coor2
+	decb			; Hacemos que AccB contenga al número de columna ingresado
+	abx			; "Desplazamos" a X sobre las columnas para llegar a la celda solicitada
+*	...			; En este punto X apunta a la celda disparada
+	ldaa	0,X
+	anda	#MASKCOL	; Analizamos si la celda apuntada ya fue disparada anteriormente
+	cmpa	#AZUL
+	bne	end_dis		; Si ya esta tocada, no modifico el estado de disparo y salgo
+
+	ldaa	0,x		; En el caso de ser un disparo válido, analizo qué consecuencia tiene
+	anda	#MASK		
+	beq	agua		; Si todos los bits de la celda son 0, es agua
+	cmpa	#SUBMAR
+	beq	hundido		; Si la celda disparada contiene un submarino, pasa a estar hundido
+	cmpa	#TITANIC	
+	beq	titatoc		; Si la celda disparada contiene parte de un titanic, evalúo si lo hundí en su totalidad
+*_________________________________________________________________________
+*
+*	Zona donde un jugador tocó algún carguero
+*_________________________________________________________________________
+car_toc	equ	*		; carguero tocado	
+
+	jsr	around		; Analizamos si el carguero tocado se hunde o no analizando las celdas contiguas
+	bcc	nohund		; Si no está hundido, significa que lo toco parcialmente y pinto la celda de amarillo.
+	bra	hundido		; Si está hundido, hundo el carguero (pinto la celda de rojo).
+
+titatoc	equ	*
+	ldab	turn		; Evalúo de qué jugador es el turno para aumentar el contador de veces que se tocó a un TITANIC
+	cmpb	#1
+	beq	titani1
+*_________________________________________________________________________
+*
+*	Zona donde el jugador 2 tocó un titanic
+*_________________________________________________________________________
+titani2	inc	titan2		; Si el jugador 2 tocó un titanic, aumento el contador de veces que lo hizo
+	ldaa	titan2
+	cmpa	#TAMTIT
+	beq	tithund		; Si el contador es igual a 4 (tamaño del titanic), significa que lo hundió
+	ldaa	0,X		; Si todavía no es igual a 4, lo tocó parcialmente (se pinta la celda de amarillo).
+	anda	#MASK	
+	bra	nohund
+*_________________________________________________________________________
+*
+*	Zona donde el jugador 1 tocó un titanic
+*_________________________________________________________________________
+titani1	inc	titan1		; Si el jugador 1 tocó un titanic, aumento el contador de veces que lo hizo
+	ldaa	titan1
+	cmpa	#TAMTIT		
+	beq	tithund		; Si el contador es igual a 4 (tamaño del titanic), significa que lo hundió
+	ldaa	0,X		; Si todavía no es igual a 4, lo tocó parcialmente (se pinta la celda de amarillo).
+	anda	#MASK
+*____________________________________________________________________________________
+*
+*	Zona donde se cambia el color de una celda indicando que se tocó parcialmente 
+*	a un barco
+*____________________________________________________________________________________
+
+nohund	oraa	#AMAR		; Se carga en AccA el color amarillo sin modificar los datos de los dos primeros bits
+	staa	0,X		; y se guarda en la celda apuntada, cambiando su color
+	bra	end_dis
+
+*__________________________________________________________________________
+*
+*	Zona donde se hunden a los barcos tocados en su totalidad
+*___________________________________________________________________________
+tithund	equ	*
+	jsr	iceberg		; Si un jugador hundió un titanic, saltamos a la subrutina que cambia el color de 
+	bra	sink		; todas sus celdas a rojo
+
+hundido	equ	*
+	oraa	#ROJO		; (Usado en caso que se haya hundido otro barco):
+	staa	0,X		; cambiamos el color de una celda a rojo.
+*_________________________________________________________________________
+*
+*	Zona donde aumento la cantidad de hundidos por el jugador de turno
+*_________________________________________________________________________
+sink	ldaa	turn		; Se evalúa de qué jugador es el turno para aumentar su contador
+	cmpa	#1		; de barcos hundidos
+	beq	hun1
+
+hun2	inc	canhun2		; Aumentamos el contador del jugador 2 en caso de que el turno es suyo
+	bra	end_dis
+
+hun1	inc	canhun1		; Aumentamos el contador del jugador 1 en caso de que el turno es suyo
+	bra	end_dis
+
+*_________________________________________________________________________
+*
+*	Zona donde se llega si no se tocó ningún barco en el disparo.
+*_________________________________________________________________________	
+agua	equ	*
+	oraa	#VERDE		; Si el disparo resultó en "agua" cambiamos el color de la celda
+	staa	0,X		; a verde para indicar de alguna forma que ya se disparó.
+	ldaa	#1
+	staa	disp		; Se indica que el jugador de turno disparó y no debe volver a jugar
+
+*______________________________________________________________________________________________
+*
+*	Fin de la subrutina, Limpio el display dejando el turno visible y borro las coordenadas
+*______________________________________________________________________________________________
+end_dis	equ	*	
+	ldaa	' '
+	clrb
+	jsr	outchar		; Imprimimos un espacio en los lugares del display donde están las
+	incb			; coordenadas ingresadas
+	jsr	outchar
+	clr	coor1		; Borramos las posiciones de memoria de las coordenadas
+	clr	coor2
+	
+	pulx			; Recupero X (Guardado al principio) que contiene la posición de la primera
+*	...			; celda de la matriz modificada.
+	jsr	copiado		; Al salir de la subrutina, copio el contenido del tablero modificado
+	%RESTORE		; al bitmap
+
+	rts
+
+*********************************************************************************************************
+*
+*	Subrutina iceberg: Como su nombre lo indica, hunde al titanic.
+*		Una vez que se tocan todas las partes de un titanic, esta subrutina cambia el color
+*		de cada parte a rojo, indicando que se hundió en su totalidad.
+*		- Usa como parámetros la variable "turn", para saber qué jugador hundió un Titanic
+*
+*********************************************************************************************************
+iceberg	equ	*
+	%BACKUP
+	ldab	turn			; Analizo si es el turno del jugador 1 o 2, y me posiciono sobre
+	cmpb	#1			; la primera celda del tablero contrario
+	beq	iceb1
+
+iceb2	ldx	#play1
+	bra	hundir
+
+iceb1	ldx	#play2
+
+hundir	equ	*			; Iniciamos un contador de partes de titanic a hundir (celdas) y comienzo
+	ldab	#TAMTIT			; a recorrer la matriz, cuando hundimos todas las partes, terminamos
+sigiceb	ldaa	0,x
+	anda	#MASK
+	cmpa	#TITANIC
+	bne	noiceb
+	oraa	#ROJO			; Para hundir las partes, cambiamos el color de las celdas a rojo.
+	staa	0,x
+	decb				; si se hundió una parte, decrementamos el contador de partes
+	cmpb	#0			
+	beq	exitice			; si es 0, terminamos
+noiceb	inx				; si todavía no hundí todas las partes, nos posicionamos sobre la celda siguiente
+	bra	sigiceb			; y continamos
+
+exitice	equ	*
+	%RESTORE
+	rts
+
+**************************************************************************************************
+*
+*	Subrutina around: Evalúa si alguna otra celda contigua al carguero está tocada
+*		- Recibe por X la posición del tablero a la que se disparó.
+*		- Devuelve el carry en 1 si se detectó otra casilla contigua con el carguero tocada
+*			o en Carry en 0, si no se tocó al carguero en una casilla contigua.
+*
+**************************************************************************************************
+around	equ	*
+
+	%BACKUP
+*_________________________________________________________________________
+*
+*	Zona donde se analiza la celda de la derecha a la disparada
+*_________________________________________________________________________
+der	pshx			; Guardamos la posición de la celda disparada, ya que trabajaremos con ella 
+*	...			; y no queremos modificarla
+	ldaa	coor1		; Actualizamos las coordenadas a las de la celda de la derecha
+	ldab	coor2
+	incb			; incremento en 1 la coordenada de las columnas para ir a la der. en la matriz
+
+	jsr	limite		; Evaluamos si las "nuevas coordenadas" son válidas (pertenecen a un tablero)
+	
+	bcs	izq		; Si no son válidas, no analizo la celda y paso al siguiente caso
+	
+	inx			; Nos movemos uno a la derecha porque existe dicha posición
+
+	%COMTOC			; Comparamos la celda actual con un carguero tocado, si coincide, cambiamos
+*	...			; el color de la celda a rojo, indicamos que el carguero está hundido y salimos
+*_________________________________________________________________________
+*
+*	Zona donde se analiza la celda de la izquierda a la disparada
+*_________________________________________________________________________
+izq	pulx			; Recuperamos en X la posición de la celda disparada y lo volvemos a guardar en
+	pshx			; el stack para no perderlo durante las cuentas
+	ldaa	coor1		; Actualizamos las coordenadas a las de la celda de la izquierda
+	ldab	coor2
+	decb			; Decrementamos en 1 la coordenada de las columnas para ir a la izq. en la matriz
+	jsr	limite		; Evaluamos si las "nuevas coordenadas" son válidas (pertenecen a un tablero)
+	
+	bcs	arr		; Si no son válidas, no analizamos la celda y pasamos al siguiente caso
+	
+	dex			; Nos movemos a la posición de la izquierda, ya que corroboramos que existe
+
+	%COMTOC			; Comparamos la celda actual con un carguero tocado, si coincide, cambiamos
+*	...			; el color de la celda a rojo, indicamos que el carguero está hundido y salimos
+*_________________________________________________________________________
+*
+*	Zona donde se analiza la celda de arriba a la disparada
+*_________________________________________________________________________
+arr	pulx			; Recuperamos en X la posición de la celda disparada y lo volvemos a guardar en
+	pshx			; el stack para no perderlo durante las cuentas
+	ldaa	coor1		; Actualizamos las coordenadas a las de la celda de arriba
+	deca			; Decrementamos en uno la coordenada de las filas, para "subir" en la matriz
+	ldab	coor2		
+
+	jsr	limite		; Evaluamos si las "nuevas coordenadas" son válidas (pertenecen a un tablero)
+
+	bcs	abaj		; Si las coordenadas no están en la matriz, salteamos la posibilidad
+
+	xgdx			; Como no hay error, subimos una fila en la matriz
+	subd	#COL*EL_SIZE
+	xgdx
+	
+	%COMTOC			; Comparamos la celda actual con un carguero tocado, si coincide, cambiamos
+*	...			; el color de la celda a rojo, indicamos que el carguero está hundido y salimos	
+*_________________________________________________________________________
+*
+*	Zona donde se analiza la celda de abajo a la disparada
+*_________________________________________________________________________
+abaj	pulx			; Recuperamos en X la posición de la celda disparada y lo volvemos a guardar en
+	pshx			; el stack para no perderlo durante las cuentas
+	ldaa	coor1		; Actualizamos las coordenadas a las de la celda de abajo
+	inca			; Incrementamos en uno la coordenada de las filas, para "bajar" en la matriz
+	ldab	coor2
+	jsr	limite		; Evaluamos si las "nuevas coordenadas" son válidas (pertenecen a un tablero)
+	
+	bcs	finarou		; Si las coordenadas no están en la matriz, salteamos la posibilidad
+	
+	ldab	#COL*EL_SIZE	; Como no hay error, bajamos una fila en la matriz
+	abx
+
+	%COMTOC			; Comparamos la celda actual con un carguero tocado, si coincide, cambiamos
+*	...			; el color de la celda a rojo, indicamos que el carguero está hundido y salimos	
+
+	pulx			; Recuperamos en X la posición de la celda disparada
+	
+	clc			; Devuelve el carry en 0 si el carguero tocado no está hundido
+
+	bra	endarou		; Salimos de la subrutina
+*_________________________________________________________________________
+*
+*	Zona donde se encontró una celda contigua tocada
+*_________________________________________________________________________
+
+chundid	equ	*		; Pintamos de rojo el bit que encontramos tocado, ya que el carguero se hunde
+	anda	#MASK
+	oraa	#ROJO
+	staa	0,x
+	
+	pulx			; Recuperamos en X la posición de la celda disparada
+	sec			; Si se hundió, seteamos el carry en 1
+	bra	endarou		; Salimos de la subrutina
+*_________________________________________________________________________
+*
+*	Zona donde no se encontró una celda contigua tocada
+*_________________________________________________________________________
+finarou	pulx			; Recuperamos en X la posición de la celda disparada 
+	clc			; Seteamos el carry en 0 indicando que el carguero no se hundió
+*_________________________________________________________________________
+*
+*	Fin de la subrutina around
+*_________________________________________________________________________
+endarou	%RESTORE
+	rts
+
+**************************************************************************************************
+*
+*	Subrutina límite: Comprueba que las coordenadas recibidas por AccA (coor1) y AccB (coor2)
+*		   estén dentro de la matriz de jugador.
+*		- Recibe por A la coordenada de la fila y por B la coordenada de la columna
+*		- Devuelve el bit de Carry en 1 si se encuentrá por fuera del tablero
+*			o en 0 si se encuentra dentro de los límites
+*
+**************************************************************************************************
+limite	equ	*
+
+	%BACKUP
+	
+	cmpa	#$A		; Comparamos la primera coordenada con la mínima posible
+	bmi	afuera		; Si es menor, salimos indicando que no pertenece a la matriz
+	cmpa	#$F		; Comparamos la primera coordenada con la mayor posible
+	bhi	afuera		; Si es mayor, salimos indicando que no pertenece a la matriz
+	cmpb	#1		; Comparamos la segunda coordenada con la mínima posible
+	bmi	afuera		; Si es menor, salimos indicando que no pertenece a la matriz
+	cmpb	#6		; Comparamos la segunda coordenada con la máxima posible
+	bhi	afuera		; Si es mayor, salimos indicando que no pertenece a la matriz
+	bra	adentro		; Si no se cumplió ninguna de las condiciones anteriores, las coordenadas
+*	...			; son correctas
+*_________________________________________________________________________
+*
+*	Zona donde las coordenadas recibidas no son válidas
+*_________________________________________________________________________
+afuera	sec			; Seteamos el carry en 1 indicando que hubo error
+	bra	endlim		; Salimos de la subrutina
+_________________________________________________________________________
+*
+*	Zona donde las coordenadas recibidas son válidas
+*_________________________________________________________________________
+adentro	clc			; Seteamos el carry en 0 indicando que no hubo error
+
+endlim	%RESTORE
+
+	rts
+
+**************************************************************************************************************
+*
+*	displ: imprime en el display una frase desplazándose de derecha a izquierda
+*		-Recibe por X la primera posición de memoria de la frase a imprimir
+*
+**************************************************************************************************************
+displ	equ	*
+
+	%BACKUP	
+	
+	pshx			; Copiamos el contenido de X a Y mediante el stack
+	puly
+	xgdx			; Restamos 3 al contenido de X para apuntar 3 posiciones antes del primer caracter
+	subd	#3		; para que la subrutina print imprima 3 posiciones vacías al comienzo.
+	xgdx
+
+sigo	ldaa	#CICLOS		; Hacemos un delay de 1 segundo (2 ciclos de 0,5 segundos)
+	jsr	delay
+	pshy			; paso al stack la posición a partir de la cual está permitido imprimir
+	jsr	print		; imprimo 4 caracteres en el display a partir de la "posición actual de la frase"
+	tsy			; Creo un frame pointer para poder comparar X con la primera posición de la frase
+*	...			; y así no imprimir las posiciones anteriores a la frase
+	inx			; Incremento X para apuntar al siguiente caracter
+	cpx	0,y		; Analizo si la posicion apuntada pertenece a la frase
+	puly			; Recupero Y del stack para "balancearlo" y no generar conflictos
+	bmi	sigo		; Si la posicion apuntada no pertenece a la frase, no imprimo ningun caracter
+	ldaa	0,x		; Si pertenece, comparamos el contenido con le terminador, si coincide, 
+	cmpa	#TERM		; no imprimimos ningún caracter en el display y salimos,
+	beq	listo
+	bra	sigo		; Si no es el terminador, analizo el siguiente
+
+listo	%RESTORE
+	rts
+
+*****************************************************************************************************************
+*
+*	print: Imprime en el display 4 carácteres de una frase en el orden que aparecen en memoria.
+*		Deja espacios en blanco si los primeros carácteres apuntado están fuera de la frase,
+*		y deja espacios vacíos luego de encontrar el terminador de la frase.
+*
+*		-Recibe por Stack la posición del primer carácter de la frase original, a partir de la cuál está
+*			permitido imprimir caráteres
+*		-Recibe por X la posición del primer carácter apuntado (puede estar antes de la frase original)
+*
+******************************************************************************************************************
+print	equ	*
+
+	%BACKUP
+	
+	tsy			; creo un frame pointer
+	
+	jsr	clrdis		; vacío el display
+	ldab	#INIDIS		; Cargo en B la posición de más a la izquierda del display
+
+imprim	cpx	8,Y		; Comparo X con la posición del primer caracter de la frase
+	bmi	incremx		; si es menor, quiere decir que hay que dejar el espacio en blanco: salteo
+	
+	ldaa	0,x		; Cargo en AccA el caracter que quiero imprimir
+	cmpa	termin2
+	beq	finprnt		; Si el caracter cargado es el terminador, voy al final de la subrutina
+	jsr	outchar		; Si no es el terminador, imprimo el caracter
+
+incremx	inx			; Apunto X al siguiente caracter
+	decb			; Apunto hacia la siguiente posición del display.
+	bmi	finprnt		; Si ya no existen posiciones, salgo
+	bra	imprim		; repito con el siguente caracter
+
+finprnt	%RESTORE
+	
+	rts
+
+***********************************
+*
+*	Clrdis: limpia el display
+*
+***********************************
+clrdis	equ	*
+
+	psha			; hago backup de los registros
+	pshb
+
+	ldaa	#' '		; cargo en A el carácter vacío
+	ldab	#INIDIS		; cargo B con la posición más a la izquierda del display
+
+clean	jsr	outchar		; imprimo el caracter
+	decb			; apunto una posición más a la derecha
+	bmi	clr		; si no hay más posiciones, termino
+	bra	clean		; repito
+
+clr	pulb			; recupero los registros
+	pula
+	rts
+
+***************************************************************************************************************************************************
+*
+*	Espacio de subrutinas destinadas al espiral que muestra al jugador ganador
+*
+*****************************************************************************************************************************************************
+*
+*	Movimiento del espiral: El espiral funciona en sentido horario, comenzando su movimiento desde una posición central del bitmap, 
+*		moviéndose en un patrón repetitivo: arriba, derecha, abajo, izquierda.
+*		La magnitud del desplazamiento funciona de a pares: arriba/derecha y abajo/izquierda, que tienen la misma magnitud, incrementando 
+*		esta cantidad a medida que pasamos de una pareja a otra.
+*
+******************************************************************************************************************************************************
+espiral	equ	*
+	
+	%BACKUP			; hago backup de los registros
+	
+	ldaa	canhun1		; analizo quién fue el ganador
+	cmpa	#6			
+	bne	gana2
+
+gana1	equ	*		; Cargo la matriz ganadora en 
+	ldx	#matg1		; el Registro X
+	stx	matgan		; y su espacio de memoria reservado (matgan)
+	bra	ini_esp		
+gana2	equ	*
+	ldx	#matg2
+	stx	matgan
+
+ini_esp	equ	*		; inicia el espiral
+	clr	contesp		; pongo en 0 el contador de la magnitud del desplazamiento
+	clr	contmov		; y el contador parcial de movimientos
+
+	ldaa	#4		; cargo las coordenadas de la posición central (Fila 4(3),Columna 3(2))
+	deca			; desde donde inicia el espiral
+	staa	fil_esp		; en las posiciones designadas para coordenadas
+	ldab	#3
+	decb
+	stab	col_esp
+	%POSIC			; posiciono X en las coordenadas provistas de la matriz ganadora
+	jsr	pintar		; copio el contenido de la coordenada de la matriz gan. en el bitmap
+
+up	equ	*
+	inc	contesp		; incremento el contador de movimientos que realizará en esa dirección
+	ldaa	contesp		; y lo cargo en 
+	staa	contmov		; el contador parcial
+sigueup	dec	fil_esp		; decremento la coordenada fila (desplazo hacia arriba en la matriz)
+	%POSIC			; posiciono X en las coordenadas provistas de la matriz ganadora
+	jsr	pintar		; copio el contenido de la coordenada de la matriz gan. en el bitmap
+	dec	contmov		; decremento el contador parcial de movimientos
+	bne	sigueup		; si siguen quedando movimientos, repito el proceso
+
+right	equ	*		
+	ldaa	contesp		; cargo el contador de movimientos en esa dirección
+	staa	contmov		; en el contador parcial
+sigueri	inc	col_esp		; incremento la coordenada columna (desplazo hacia la derecha en la matriz)
+	%POSIC			; posiciono X en las coordenadas provistas de la matriz ganadora
+	jsr	pintar		; copio el contenido de la coordenada de la matriz gan. en el bitmap
+	dec	contmov		; decremento el contador parcial de movimientos
+	bne	sigueri		; si siguen quedando movimientos, repito el proceso
+	
+down	equ	*
+	inc	contesp		; incremento el contador de movimientos que realizará en esa dirección
+	ldaa	contesp		; y lo cargo en 
+	staa	contmov		; el contador parcial
+siguedo	inc	fil_esp		; incremento la coordenada fila (desplazo hacia abajo en la matriz)
+	%POSIC			; posiciono X en las coordenadas provistas de la matriz ganadora
+	jsr	pintar		; copio el contenido de la coordenada de la matriz gan. en el bitmap
+	bcs	finesp		; si hay carry, significa que terminamos el espiral
+	dec	contmov		; decrementamos el contador parcial de movimientos en esa dirección
+	bne	siguedo		; si nos quedan movimientos, repetimos el proceso
+	
+left	equ	*
+	ldaa	contesp		; cargo el contador de movimientos en esa dirección
+	staa	contmov		; en el contador parcial
+siguele	dec	col_esp		; decremento la coordenada columna (desplazo hacia la izquierda en la matriz)
+	%POSIC			; posiciono X en las coordenadas provistas de la matriz ganadora
+	jsr	pintar
+	dec	contmov
+	bne	siguele		; si siguen quedando movimientos, repito el proceso
+	jmp	up		; caso contrario, voy a up, para repetir el loop
+	
+finesp	equ	*	
+	%RESTORE		; restauro los registros
+	rts			; salgo de la subrutina
+
+*****************************************************************************************************************
+*
+*	Subrutina Pintar: toma el contenido (color) de un byte de la matriz ganadora (apuntado por x)
+*	y lo copia en las mismas coordenadas pero del bitmap.
+*
+******************************************************************************************************************
+pintar	equ	*
+	%BACKUP				; hago backup de los registros
+	ldaa	#CICLOS
+	jsr	delay			; hago un delay antes de pintar
+	ldy	#BITMAP			; cargo Y con la celda inicial del bitmap
+	ldaa	fil_esp			; cargo A con la coordenada de fila
+	ldab	#COL*EL_SIZE
+	mul				
+	aby				; y me posiciono en la celda inicial de esa fila
+	ldab	col_esp			
+	aby				; le sumo la coordenada columna. Esta posicionado.
+	ldaa	0,X			; Copio el contenido de la celda apuntada por X
+	staa	0,Y			; en la celda apuntada por Y 
+	cpy	#FINMAP			; Si la celda apuntada por Y es la ultima a colorear
+	bne	finpint
+	sec				; seteo el carry
+	bra 	endpint			
+finpint	equ	*
+	clc				; sino, lo dejo en 0
+endpint	%RESTORE			; restauro los registros
+	rts				; salgo de la subrutina
+
+*==========================================================================================================================
+
+	rseg	VARS
+**************************************************
+*
+*	ZONA DE VARIABLES
+*
+**************************************************
+*______________________________________________
+*
+*	Variables del juego
+*_____________________________________________
+coor1	rmb	1		; almacena el número de fila ingresado por el usuario
+coor2	rmb	1		; almacena el número de columna ingresado por el usuario
+turn	rmb	1		; almacena de quién es el turno actual
+disp	rmb	1		; almacena un indicador de si hubo un disparo al agua
+canhun1	rmb	1		; Contador de barcos hundidos por el player 1
+canhun2	rmb	1		; Contador de barcos hundidos por el player 2
+titan1	rmb	1		; Contador de veces que el jugador 1 toca un TITANIC
+titan2	rmb	1		; Contador de veces que el jugador 2 toca un TITANIC
+
+*____________________________________________
+*
+*	Variables para la subrutina espiral
+*____________________________________________
+contesp	rmb	1		; Contador absoluto de cantidad de mov. para espiral
+contmov	rmb	1		; Contador parcial de cantidad de mov. para espiral
+col_esp	rmb	1		; Coordenadas para espiral. Columnas
+fil_esp	rmb	1		; Coordenadas para espiral. Filas
+matgan	rmb	1		; Dirección de inicio de matriz ganadora
+
+*********************************************************************************************
+*
+*	Zona de stack
+*
+*********************************************************************************************
+stack	rmb	50
+stackp	equ	*-1
+
+************************************************************
+*
+*	Inicialización de las matrices de los dos jugadores
+*
+************************************************************
+play1	rmb	COL*FIL*EL_SIZE		; Inicializo tablero del jugador 1
+play2	rmb	COL*FIL*EL_SIZE		; Inicializo tablero del jugador 2
+
+**************************************************************************************************
+*
+*	Constantes para llenar los tableros.
+*		- Se debe completar el rotulo CAN_BAR con la cantidad de embarcaciones por jugador
+*		- Cada submarino ocupa 1 casilla
+*		- Cada carguero debe ocupar 2 casillas contiguas
+*		- Cada jugador puede colocar 1 TITANIC como máximo.
+*			Este debe ocupar 4 casillas. Estas 4 casillas pueden estar
+*			alineadas (4x1 o 1x4) o formando un cuadrado (2x2).
+*			Los jugadores deben ponerse de acuerdo en qué forma tendrán sus Titanics
+*
+*************************************************************************************************
+___	equ	00000000b		; representa el agua
+SUB	equ	01000000b		; representa un submarino
+CAR	equ	10000000b		; representa una casilla de carguero
+TIT	equ	11000000b		; representa una casilla de Titanic
+CAN_BAR	equ	6			; cantidad de barcos por jugador
+*******************************************************************
+*
+*	TABLERO PLAYER 1: 
+*		
+*******************************************************************
+	ORG	play1
+
+*		 1   2   3   4   5   6
+
+	fcb	___,SUB,___,CAR,___,___		; A
+	
+	fcb	___,___,___,CAR,___,___		; B
+	
+	fcb	___,___,___,___,___,SUB		; C
+	
+	fcb	___,TIT,TIT,TIT,TIT,___		; D
+	
+	fcb	SUB,___,___,___,___,___		; E
+	
+	fcb	___,___,CAR,CAR,___,___		; F
+
+	
+*******************************************************************
+*
+*	TABLERO PLAYER 2:
+*	
+*******************************************************************
+	ORG	play2
+
+*		 1   2   3   4   5   6
+
+	fcb	TIT,___,___,___,SUB,___		; A
+	
+	fcb	TIT,___,___,___,___,___		; B
+	
+	fcb	TIT,___,___,SUB,___,CAR		; C
+	
+	fcb	TIT,___,___,___,___,CAR		; D
+	
+	fcb	___,___,___,___,___,___		; E
+	
+	fcb	CAR,CAR,___,___,___,SUB		; F
+
+
+	rseg	CONST
+*******************************************************
+*
+*	ZONA DE CONSTANTES
+*
+*********************************************************
+*_______________________________________________
+*
+* Frase de ganador
+*______________________________________________
+
+winner1	fcc	'GANADOR PLAYER 1!!! '
+	fcb	0
+winner2	fcc	'GANADOR PLAYER 2!!! '
+	fcb	0
+
+*_______________________________________________
+*
+* Frase de turnos
+*______________________________________________
+frase1	fcc	'TURNO PLAYER 1'
+termin1	fcb	0
+
+frase2	fcc	'TURNO PLAYER 2'
+termin2	fcb	0
+
+*_______________________________________________
+*
+* Frase de RESET
+*______________________________________________
+frase3	fcc	'PULSE RESET PARA CONFIRMAR'
+	fcb	0
+
+
+********************************************************************
+*
+*	TABLEROS GANADORES (imagen)
+*
+********************************************************************
+	
+matg1	equ	*					; matriz para P1 ganador
+	fcb	ROJOC,ROJOC,ROJOC,NEGRO,NEGRO,ROSAC
+	fcb	ROJOC,NEGRO,ROJOC,NEGRO,ROSAC,ROSAC
+	fcb	ROJOC,NEGRO,ROJOC,NEGRO,NEGRO,ROSAC
+	fcb	ROJOC,ROJOC,ROJOC,NEGRO,NEGRO,ROSAC
+	fcb	ROJOC,NEGRO,NEGRO,NEGRO,NEGRO,ROSAC
+	fcb	ROJOC,NEGRO,NEGRO,NEGRO,NEGRO,ROSAC
+
+matg2	equ	*					; matriz para P2 ganador
+	fcb	AMAR,AMAR,AMAR,ROSAC,ROSAC,ROSAC
+	fcb	AMAR,NEGRO,AMAR,NEGRO,NEGRO,ROSAC
+	fcb	AMAR,NEGRO,AMAR,NEGRO,NEGRO,ROSAC
+	fcb	AMAR,AMAR,AMAR,ROSAC,ROSAC,ROSAC
+	fcb	AMAR,NEGRO,NEGRO,ROSAC,NEGRO,NEGRO
+	fcb	AMAR,NEGRO,NEGRO,ROSAC,ROSAC,ROSAC
+
+*===================================================================================================================
+
+	END
