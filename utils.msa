@@ -1,0 +1,101 @@
+*************************************************************************
+*	UTILITIES			utils.msa			*
+*************************************************************************
+	p68h11
+
+	public	push_R,push_L
+
+	rseg	CODE
+
+*************************************************************************
+*		# TESTED WORKING STABLE #	Sun 06  21:11		*
+*************************************************************************
+*		PUSH FROM RIGHT				* Nota: la subrutina esta forzada
+* agrega un byte por la derecha de un vector de 	*	para vectores de longitud 2
+* longitud 2, desplazandolo todos sus elementos hacia 	*	pero dicho valor se puede cambiar
+* la izquierda						*	o pasar como parametro si se desea
+* Params: 						*	mejorar el programa para vectores
+*	- [AccIY]: puntero al vector			*	de longitud N
+* 	- [AccA]: byte a agregar.			*
+* Nota: No devuelve valores, no es necesario liberar el *
+* 	stack luego de invocarla			*
+*********************************************************
+* [A] 0 <- (X) [FP]
+* [XH]
+* [XL]
+* [PCH]
+* [PCL]
+push_R	EQU	*
+	pshx		;backup de X
+	psha		;guardo el valor de A (byte a cargar)
+	tsx
+	pshy		;backup de Y (posición de memoria del vector)
+	pshb		;backup de B
+
+	ldab	#1	;cargo la cantidad de repeticiones del ciclo (vectorSize-1)
+
+L01	ldaa	1,y	;copio el valor siguiente
+	staa	0,y	;y lo desplazo hacia la izquierda (posición anterior)
+	iny		;voy a la sig. posición
+	decb		;decremento la cantidad de ciclos restantes
+	bne	L01	;si no son cero, repito
+
+
+	ldaa	0,x	;leo el byte del input que debo pushear
+	staa	0,y	;lo escribo en la última posición
+
+	pulb		;recupero todos los backups
+	puly
+	pula
+	pulx
+	rts
+
+
+
+*************************************************************************
+*		# TESTED WORKING STABLE #	Sun 06  21:11		*
+*************************************************************************
+*		PUSH FROM LEFT				*
+* agrega un byte por la izquierda de un vector de 	*
+* longitud 2, moviendo todos los elementos a la derecha	*
+* Params: 						*
+* 	- [AccA]: byte a agregar.			*
+*	- [AccIY]: puntero al vector			*
+* Nota: No devuelve valores, no es necesario liberar el *
+* 	stack luego de invocarla			*
+*********************************************************
+* [A] 0 <- (X)
+* [XH]
+* [XL]
+* [PCH]
+* [PCL]
+push_L	EQU	*
+	pshx		;backup de X
+	psha		;guardo el valor de A (byte a cargar)
+	tsx
+	pshy		;backup de Y
+	pshb		;backup de B
+
+	ldab	#1	;cargo la cantidad de repeticiones del ciclo (vectorSize-1)
+	aby		agrego el desfase
+	dey		resto 1 (porque necesito posicionarme en la posición anterior, no en la última)
+
+L03	ldaa	0,y	;copio el valor de la posición actual
+	staa	1,y	;y lo guardo en la posición siguiente (a la derecha)
+	dey		;voy a la posición izquierda (anterior)
+	decb		;decremento la cantidad de ciclos restantes
+	bne	L03	;si no son cero, repito
+
+
+	ldaa	0,x	;leo el byte del input que debo pushear
+	staa	1,y	;lo escribo en la primera posición
+
+	pulb		;recupero todos los backups
+	puly
+	pula
+	pulx
+	rts
+
+
+
+	END

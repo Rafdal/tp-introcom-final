@@ -1,0 +1,58 @@
+*************************************************************************
+*	FLOW CONTROL		flowctrl.def				*
+*************************************************************************
+* 									*
+*   Definiciones (macros) utiles para controlar el flujo del programa	*
+* 									*
+*************************************************************************
+
+
+
+
+*************************************************************************
+* TO-DO: Solucionar problema del ultimo CASE generado			*
+*	innecesariamente (aunque por suerte no se compila)		*
+*************************************************************************
+*	# NOT FULLY TESTED #		WORK IN PROGRESS		* TEST PASSING
+*************************************************************************
+*			SWITCH CASE (macro)				*
+* Descripcion:								*
+* 	Genera una tabla de saltos (jumptable) condicionales para	*
+*  dividir el flujo del programa segun el valor de [AccA]. Logrando un 	*
+*  comportamiento similar a los Switch-case de los lenguajes modernos	*
+*									*
+* SYNTAX:	%switch label,0,n_cases					*
+* EJ:	%switch case,0,5     (creo un switch case con 6 saltos posibles)*
+* 									*
+* NOTAS: 								*
+*	- El segundo parametro siempre lleva un 0 (cero)		*
+*	- Los rotulos (label) siempre comienzan a partir del 0000	*	
+*************************************************************************
+	macro 	%switch
+ncase	SET	\1
+	IF 	ncase<=\2
+	cmpa	#ncase		comparo el valor de A con el case index
+	beq	\0\@		si coincide hago branch hacia \0\<
+ncase	SET	ncase+1
+	%switch	\0,ncase,\2
+	ENDIF
+	endmac	
+
+*********************************************************
+* *		CODIGO DE EJEMPLO
+* * Generar un switch de 3 casos/saltos posibles (0-2) 
+* 
+* 	%switch	CAS,0,2
+* 	bra	break		si no cumple ningun caso salto a break
+* CAS0000	EQU	*	case AccA=0
+* 	ldab	#$A
+* 	bra	break
+* CAS0001	EQU	*	case AccA=1
+* 	ldab	#$B
+* 	bra	break
+* CAS0002	EQU	*	case AccA=2
+* 	ldab	#$C
+* 	bra	break
+* break	equ	*		retorno
+* 
+*********************************************************

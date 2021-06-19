@@ -1,0 +1,405 @@
+*************************************************************************
+*	USER INTERFACE MODULES	v2		UI.msa			*
+*									*
+* subrutinas para controlar el display, teclado y carga de datos	*
+*************************************************************************
+
+        p68h11
+
+	extern	push_L,push_R,str2int
+
+	public	initdis,waitkey,outchar,println,clrdis,numForm
+
+******* Ports ***************************
+
+DDRC	equ	$1007		; data direction register for C
+PIOC	equ	$1002		; for strobe B assertion change
+PORTCL	equ	$1005		; port C latched
+PORTB	equ	$1004		; port B
+PORTC	equ	$1003		; rows
+
+
+******* Cols and Row Ports **************
+
+ROWS	equ	PORTC		; outputs
+COLS	equ	PORTCL		; inputs
+
+***** Row and column Masks *************************
+
+FIL0	equ	00001110b  	; mascaras para manejo de filas
+FIL1	equ	00001101b
+FIL2	equ	00001011b
+FIL3	equ	00000111b
+
+COL0	equ	11100000b	; mascaras para manejo de columnas
+COL1	equ	11010000b
+COL2	equ	10110000b
+COL3	equ	01110000b	
+
+****** Keyboard Mask ********************
+MASKOUT	equ	11110000b
+
+	rseg	CODE
+
+
+$str_hand.def			string handlers
+
+
+
+*************************************************************************
+*		# NOT FULLY TESTED #		WORK IN PROGRESS	*
+*************************************************************************
+*			NUM FORM			*
+*	     fomrulario de entrada numerica		*
+* Funcionamiento:					*
+*	Espera a que el usuario ingrese un valor y/o	*
+* presione una tecla de control.			*
+* Retorna con el valor ingresado (si corresponde) y con *
+* el ID de la tecla (status code) de control presionada.*
+*							*
+* Inputs:						*
+*	[AccA]: ultima operacion
+* 	[AccIY]: direc. mem. variable global display	*
+* Outputs:						*
+*	[AccB]: numero escrito				*
+*	[AccA]: status code				*
+* 							*
+* STATUS CODES:						*
+*	0 - sumar '+' 		AccB = valor ingresado	*
+*	1 - restar '-'		AccB = valor ingresado	*
+*	2 - CLEAR 		AccB = 0		*
+*	3 - dividir '/'		AccB = valor ingresado	*
+*	4 - multiplicar '*'	AccB = valor ingresado	*
+*	5 - IGUAL '='		AccB = valor ingresado	*
+*********************************************************
+* [ last Op] 0 <-(X)
+* [  cont  ] 1
+* [  X L   ]
+* [  X L   ]
+* [  PC H  ]
+* [  PC L  ]
+numForm	EQU	*
+	pshx
+	ldab	#2		cargo la cantidad maxima de caracteres en INPUT
+	pshb			creo dicha variable local
+	psha			guardo el valor de A
+	tsx
+	pshy
+	ldab	#2		cargo el offset para mostrar los numeros
+	aby			agrego el offset
+	
+
+***************** WIP ******************* (codigo enmendado)
+	ldaa	0,x		me fijo el codigo de la ultima operacion
+	cmpa	#2		comparo con codigo CLEAR
+	beq	ret		si no fue, voy a imprimir por pantalla
+	cmpa	#5		comparo con operacion 'igual' (=)[F] code=5
+	bne	break		si no fue, voy a imprimir por pantalla
+
+
+isNum0	jsr	waitkey
+	cmpa	#9		chequeo si esta en el rango 0-9 (numero)
+	bls	isNum0
+	clr	0,y		clear str
+	clr	1,y
+	
+	jsr	clrdis		clear display
+
+	suba	#10		quito el offset del ID de los numeros
+	bra	ret
+************** END WIP *******************
+
+loop	equ	*
+	jsr	waitkey		espero a recibir un ID de tecla. AccA = ID
+
+	cmpa	#9		chequeo si esta en el rango 0-9 (numero)
+	bls	isNum		si es un numero, lo analizo aparte
+
+*				si no es un numero, analizo el caracter de control
+	suba	#10		quitando el desface numerico del ID
+
+*****************
+* (AccA)	*
+*  [0] A (+)	*
+*  [1] B (-)	*
+*  [2] C (Clear)*
+*  [3] D (/)	*
+*  [4] E (*)	*
+*  [5] F (=)	*
+*****************
+
+	cmpa	#2
+	bne	ret_val		Si no es el boton Clear, retorno con valores
+
+**************** CLEAR BTN *********************
+	ldab	#2		cargo la cantidad max. de caracteres
+	cmpb	1,x		chequeo la cant. de caracteres usados
+	beq	clear		si ninguno esta usado, voy a clear y salgo de la subrutina
+	
+	ldaa	#' '		sino, agrego un espacio por izquierda
+	jsr	push_L		y borro el caracter de la derecha
+	inc	1,x		incremento la cantidad de caracteres disponibles
+	bra	break		e imprimo por pantalla
+
+
+***************** NUMBER ANALYSIS ***********
+isNum	equ	*		
+	tst	1,x		si la cantidad de caracteres disponibles
+	beq	break		es cero, salgo (no agrego nada)
+	adda	#'0'		Si no lo es, agrego el desfase ASCII del caracter
+	jsr	push_R		y lo agrego al vector
+	dec	1,x		decremento la cantidad de caracteres disponibles
+
+
+break	equ	*
+**************** PRINT ****************
+	ldaa	0,y		cargo los caracteres en memoria
+	ldab	#1		y los muestro por tantalla
+	jsr	outchar
+	ldaa	1,y
+	ldab	#0
+	jsr	outchar
+
+**************** END LOOP **************
+	jmp	loop		repetir*
+**************** END LOOP **************
+
+
+**************** CLEAR ********************
+*  Salgo de la subrutina y borro AccB
+clear	equ	*
+	ldab	#0
+	bra	ret
+
+************* RETURN VALUES *****************
+*  Salgo de la subrutina con retorno de valores
+ret_val	equ	*
+	jsr	str2int
+
+*********** RETORNO DE SUBRUTINA ***********
+ret	equ	*	
+	puly		recupero backup de Y
+	ins		libero 2 bytes del stack usado por variable local
+	ins
+	pulx		recupero backup de X
+	rts
+
+
+
+
+
+
+
+
+
+
+*************************************************************************
+*		# TESTED WORKING STABLE #	Sun 06  18:15		*
+*******************************************************************************************************
+* 				WAITKEY
+* Descripcion: 
+*	Espera a que se presione una tecla y devuelve el valor numerico 
+*	de la tecla presionada en el teclado por el registro A
+* 
+* - Pone el carry en 1 si no encontro el numero, y en 0 en caso de haberlo encontrado
+* 
+*******************************************************************************************************
+waitkey	equ	*
+
+	pshb	                ; hago backup del registro B
+
+fi0	ldaa	#FIL0		; cargo la fila 0 con un 0
+	staa	PORTC
+	ldab	#0		; cargo B con el numero de fila
+	jsr	convert
+	bcc	finin		; si se encontro el numero, termino
+
+fi1	ldaa	#FIL1		; cargo la fila 1 con un 0
+	staa	PORTC
+	ldab	#1		; cargo B con el numero de fila
+	jsr	convert
+	bcc	finin		; si se encontro el numero, termino
+
+fi2	ldaa	#FIL2		; cargo la fila 2 con un 0
+	staa	PORTC
+	ldab	#2		; cargo B con el numero de fila
+	jsr	convert
+	bcc	finin		; si se encontro el numero, termino
+
+fi3	ldaa	#FIL3		; cargo la fila 3 con un 0
+	staa	PORTC
+	ldab	#3		; cargo B con el numero de fila
+	jsr	convert
+	bcc	finin		; si se encontro el numero, termino
+
+	sec			; si no encontro el numero, pongo el carry en 1.
+	bra	endin
+
+finin	tba			; transfiero el valor de B con el numero encontrado en A.
+
+endin	pulb			; recupero el registro B
+
+	bcs	waitkey
+
+	rts
+
+*******************************************************************************************************
+* 
+*	convert: dados un numero de fila y el valor devuelto por el teclado en dicha fila
+*		devuelve el numero apretado en el teclado en valor hexadecimal
+*		- Recibe por B el numero de fila donde se lo encontro (0-3)
+*		- Devuelve por B el numero apretado en el teclado en valor hexadecimal
+*		- Pone el carry en 1 si no encontro el numero, y en 0 en caso de haberlo encontrado
+* 
+*******************************************************************************************************
+convert	equ	*
+
+	psha
+
+	ldaa	#4
+	mul			; hago que B valga el menor numero que aparece entre las teclas de la fila
+	
+	ldaa	PORTC		; leo el puerto C
+	anda	#MASKOUT	; hago una mascara para obtener solo los 4 bits mas significativos (columnas)
+	
+	cmpa	#MASKOUT
+	beq	sinnum  	; de ser todos 1, no se apreto ninguna tecla, termino la subrutina
+
+	cmpa	#COL0		
+	bne	sig1		; si la tecla apretada no estaba en la columna 0, me fijo si fue en 1
+	ldaa	#0		; si fue en 0, cargo en A el valor numerico 0
+	bra	multi		; voy a calcular el numero
+
+sig1	cmpa	#COL1		
+	bne	sig2		; si la tecla apretada no estaba en la columna 1, me fijo si fue en 2
+	ldaa	#1		; si fue un 1, cargo en A el valor numerico 1
+	bra	multi		; voy a calcular el numero
+
+sig2	cmpa	#COL2
+	bne	sig3		; si la tecla apretada no estaba en la columna 2, debe estar en 3
+	ldaa	#2		; si fue un 2, cargo en A el valor numerico 2
+	bra	multi		; voy a calcular el numero
+
+sig3	ldaa	#3		; en este punto la tecla apretada debe ser de la columna 3, por lo que cargo un 3 en A
+	bra	multi		; voy a calcular el numero
+
+
+multi	aba			; le sumo al valor de A (la columna), el valor de B, que apuntaba a la primera columna.
+	tab			; devuelvo el valor en B
+
+	ldaa	PORTC
+	staa	PORTC		; actualizamos el puerto C para poder visualizar la tecla apretada
+	
+soltar	ldaa	PORTC		
+	anda	#MASKOUT	; esperamos a que se suelte la tecla para que el programa siga, y asi poder mandar
+	cmpa	#MASKOUT	; un caracter por vez que se presiona la tecla
+	bne	soltar
+
+	bra	fincon		; pongo el carry en 0, indicando que encontro el numero
+
+sinnum	sec			; si no hay numero, seteo el carry
+
+fincon	pula
+
+	rts
+
+
+
+
+
+*************************************************************************
+*		# TESTED WORKING STABLE #	Sat 05  18:26		*
+*************************************************************************
+*		println	(PRINT LINE)					*
+* Descripcion:								*
+*	Imprime 4 caracteres en el display en una sola			*
+* subrutina, utilizando un arreglo de 4 bytes (caracteres) en memoria	*
+* como input para el display						*
+*									*
+* Params:								*
+* 	- [AccY]: Pos. de memoria de la cadena que			*
+*		desea imprimir						*
+* 									*
+* Nota: no devuelve valores, deja el AccY como estaba			*
+*	antes de ejecutar la subrutina					*
+*************************************************************************
+* [XH] 0 <- (X)
+* [XL] 1
+* [PCH] 2
+* [PCL] 3
+
+println	equ	*
+	pshy		backup Y
+	psha		backup A
+	pshb		backup B
+
+	ldab	#4	;inicio B en 4
+repite	equ	*
+	decb
+	ldaa	0,y	;leo el caracter en cuestion
+	stab	PORTCL	;set the position 0-3
+	staa	PORTB	;set the character
+	iny
+
+	tstb
+	bne	repite
+
+	pulb		recupero backup B
+	pula		recupero backup A
+	puly		recupero backup Y
+	rts
+
+
+
+*************************************************************************
+*		# TESTED WORKING STABLE #	Mon 07  13:09		*
+*************************************************************************
+*		CLEAR	DISPLAY				*
+* Descripcion:						*
+*	Borra el contenido del display 			*
+*							*
+* Nota: no devuelve valores ni recibe parametros 	*
+*********************************************************
+clrdis	equ	*
+	psha			backup de A
+	pshb			backup de B
+
+	ldab	#3		cantidad de ciclos menos 1 (para usarlo como index)
+L05	ldaa	#' '		cargo un espacio
+	jsr 	outchar		lo escribo en el display
+	decb			decremento el indice
+	bpl	L05		si es positivo, repito (hasta el cero)
+
+	pulb			
+	pula
+	rts			retorno de la subrutina
+
+
+
+*****************************************
+*	outchar				*
+* ACCA: Caracter a enviar		*
+* ACCB: Posicion	(0-3)		*
+*****************************************
+outchar	equ	*
+	stab	PORTCL	;set the position
+	staa	PORTB	;set the character
+	rts
+
+*****************************************
+*	initdis				*
+* Inicia el display			*
+*****************************************
+
+initdis	equ	*
+	psha
+	ldaa	#$0F	;set for output
+	staa	DDRC	;C output
+	ldaa	PIOC	;get current value
+	anda	#$FE	;reset bit 0 to 0
+	staa	PIOC	;send it out
+	pula
+	rts
+
+*************************************************************************************************************
+	END

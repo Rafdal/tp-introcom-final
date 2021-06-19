@@ -1,0 +1,170 @@
+*************************************************************************
+*	STRING FUNCTIONS		string.msa			*
+*************************************************************************
+	p68h11
+	
+	public	int4str,str2int
+
+	rseg	CODE
+	
+
+*************************************************************************
+*		# NOT FULLY TESTED #		WORK IN PROGRESS	*	PASSING
+*****************************************************************************************
+*				STRING TO INTEGER (STR2INT)				*
+*											*
+* Descripcion: 										*
+*	Recibe el puntero a una cadena de 2 caracteres compuesta por numeros en	codigo	*
+* ASCII (ej: '27'). Convierte convierte el valor de dicha cadena a un numero de 1 byte	*
+*											*
+* NOTA: No usa el stack para el pasaje de parametros					*
+* Input: 										*
+*	- [AccIY]: direccion de memoria de la cadena a convertir			*
+* Output:										*
+*	- [AccB]: Valor numerico interpretdo de la cadena				*
+* 											*
+* PRECAUCION:										* 
+*	1) LA CADENA DEBE ESTAR FORMADA POR CARACTERES NUMERICOS!			*
+*	2) LOS CEROS Y ESPACIOS SON TOMADOS COMO CEROS LITERALES, NO IMPORTA DONDE ESTEN*
+*****************************************************************************************
+str2int	EQU	*
+	psha			backup de A
+
+	ldaa	0,y		cargo en A el numero mas significativo
+	beq	force0		si es nulo, cargo un cero
+	cmpa	#' '		me fijo si es un espacio
+	bne	skip0		si no es, salteo la correcion
+force0	ldaa	#'0'		cargo un cero forzado
+
+skip0	ldab	#'0'		cargo en B el "0" en ASCII
+	sba			resto el B de A y así tengo el valor de A en unidades
+	ldab	#10		cargo el B con 10
+	mul			multiplico A por 10 para tener el decimal y lo guardo en B
+
+	ldaa	1,y		cargo en A el numero unitario en ASCII
+	beq	force1		si es nulo, cargo un cero
+	cmpa	#' '		me fijo si es un espacio
+	bne	skip1		si no es, salteo la correcion
+force1	ldaa	#'0'		cargo un cero forzado
+
+skip1	aba			sumo el decimal con el unitario en ASCII y lo guardo en A
+	ldab	#48		cargo en B el "0" en ASCII
+	sba			al numero le resto el "0" en ASCII para tenerlo en sistema decimal
+	
+	tab			B=A
+	pula			recupero backup de A
+	rts
+
+
+
+
+
+*************************************************************************   DEPRECATED !
+*		# TESTED WORKING STABLE #	Sun 06  06:27		*   USE INT4STR
+*****************************************************************************************
+*			INTEGER TO STRING  (INT2STR)		[OLD]			*
+* Descripcion: 										*
+*	Recibe un numero entero de 16 bits por stack y lo representa en una		*
+*	cadena de texto de 3 caracteres ASCII (max 999) la cual tambien devuelve por	*
+*	stack. Si se excede de 999, da error (carry=1).					*
+* 											*
+* Usar int4str en vez de esta !								*
+* 											*
+* Inputs (via stack): [ num ] (2 bytes)							*
+* Outputs (via stack):  [ char0 ] [ char1 ] [ char2 ]					*
+*											*
+* Nota: Se debe hacer 1 byte de espacio en el stack luego de pushear num		*
+*****************************************************************************************
+*  stack frame:
+* [    Y H     ] 0 <-(Y)
+* [    Y L     ] 1
+* [   PC  H    ] 2
+* [   PC  L    ] 3
+* [  -    / c0 ] 4	<=[  fin 8+Y ]max
+* [ num H / c1 ] 5
+* [ num L / c2 ] 6	<=[ inicio 8+Y ]min
+int2str	equ	*
+	pshy		backup de Y (sacamos los otros backups porque los hace int4str)
+	tsy
+
+	ldd	5,y		D = num
+	cpd	#999		comparo D con 999
+	bls	inrange		si D<=999  el valor esta en rango (3 digitos)
+	sec			seteo carry
+	bra	retorno		si no, fuera de rango, salgo con carry C=1
+
+inrange	equ	*
+	clr	4,y		inicio la cadena en cero
+	clr	5,y
+
+dividir	ldx	#10		X = 10
+	idiv			X = D/X  ,  D = resto = B   (resto de division de enteros)
+	beq	cero		resultado de la division dio cero -> es el ultimo digito y salgo
+	addb	#'0'		si aun no termina, agrego el desfase ASCII
+	stab	6,y		y luego guardo el caracter.
+	dey			voy a la pos anterior
+	xgdx			D = X
+	bra	dividir		dividir hasta que el resultado sea cero
+
+cero	equ	*
+	addb	#'0'		si aun no termina, agrego el desfase ASCII
+	stab	6,y		cargo el ultimo caracter 
+
+retorno	equ	*		retorno de la subrutina
+	puly
+	rts
+
+
+*************************************************************************
+*		# TESTED WORKING STABLE #	Sun 06  04:14		*
+*****************************************************************************************
+*		INTEGER TO STRING v2 (INT4STR)		### version 2 ###		*
+*											*
+* Descripcion: Recibe un numero entero de 16 bits por stack y lo representa en una	*
+*	cadena de texto de 3 caracteres ASCII (max 999) la cual guarda en la direccion	*
+*	de memoria a la que apunta el puntero IY					*
+*	Si se excede de 999, da error (carry=1).					*
+* 											*
+* Inputs: 										*
+*	- num: [STACK] Numero a convertir (2 bytes)					*
+*	- outStr: [AccIY] direccion de memoria a guardar la cadena			*
+* 											*
+* Outputs: ninguno									*
+* NOTA IMPORTANTE: Se deben liberar 2 bytes del stack					*
+* ERROR CASE: num > 999  (Carry=1)							*
+*****************************************************************************************
+* Comentario del programador:  Hicimos esta nueva subrutina para no modificar int2str	*
+*	por falta de tiempo y porque la misma ya estaba testeada			*
+*****************************************************************************************
+*  stack frame:
+* [  X H  ] 0 <-(X)
+* [  X L  ] 1
+* [  PC H ] 2
+* [  PC L ] 3
+* [ num H ] 4
+* [ num L ] 5
+int4str	equ	*
+	pshx
+	tsx
+	psha
+	pshb
+
+	ldd	4,x		leo el numero a convertir
+	xgdx			X<-->D
+	pshx			paso el numero por stack
+	xgdx			X<-->D
+	des			creo espacio en el stack
+	jsr	int2str		ejecuto la subrutina vieja
+	pulx			
+	stx	0,y		guardo el output de texto en la variable
+	pula
+	staa	2,y		NOTAR que 'stx' y 'staa' no modifican el carry
+
+	pulb
+	pula
+	pulx
+	rts
+
+
+
+	END

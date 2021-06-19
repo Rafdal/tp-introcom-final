@@ -1,0 +1,24 @@
+*.*
+!.vscode
+!*.json
+!*.code-snippets
+
+## Handlers & defs
+!str_hand.def
+!flowctrl.def
+
+## Modules
+!utils.msa
+!string.msa
+!game.msa
+!UI.msa
+
+## main
+!battle.msa
+!battle.s19
+!battle.r07
+
+
+!README.md
+!.gitignore
+!.gitattributes
