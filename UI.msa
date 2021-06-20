@@ -6,8 +6,6 @@
 
         p68h11
 
-	extern	push_L,push_R
-
 	public	initdis,waitkey,outchar,println,clrdis
 	public	bitmap
 
