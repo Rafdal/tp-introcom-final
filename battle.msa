@@ -755,7 +755,7 @@ winner2	fcc	'GANADOR PLAYER 2'
 	
 	fcb	___,___,___,___,___,SUB		; C
 	
-	fcb	___,TIT,TIT,TIT,TIT,___		; D
+	fcb	___,TIT,TIT,TIT,___,___		; D
 	
 	fcb	SUB,___,___,___,___,___		; E
 	
@@ -771,7 +771,7 @@ winner2	fcc	'GANADOR PLAYER 2'
 
 *		 1   2   3   4   5   6
 
-	fcb	TIT,___,___,___,SUB,___		; A
+	fcb	___,___,___,___,SUB,___		; A
 	
 	fcb	TIT,___,___,___,___,___		; B
 	

@@ -62,7 +62,7 @@ delay	equ	*
 	pshy							(5 ciclos)
 	psha							(3 ciclos)
 	pshb							(3 ciclos)
-	ldaa	#18		Cargo la cantidad de repeticiones que haré con el loop1. (23 ciclos)
+	ldaa	#6		Cargo la cantidad de repeticiones que haré con el loop1. (23 ciclos)
 *								[TOTAL:17]
 
 *	[LOOP1]: n recorridos del loop1 lleva n*(9+T) ciclos, siendo T los ciclos en total del loop2. 
