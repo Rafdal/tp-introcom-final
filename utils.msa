@@ -3,11 +3,47 @@
 *************************************************************************
 	p68h11
 
-	public	push_R,push_L,delay
+	public delay,copiado
+	extern bitmap
+
+$macros.def
 
 	rseg	CODE
 
 
+
+*####################################
+*-	T O    D O 
+*####################################
+*
+*	Revisar si meter en utils.msa y el problema de la cosntantes
+*
+*******************************************************************************************************************
+*
+* 	Subrutina copiado: Copia el contenido de una matriz a al Bitmap
+*		- Recibe por X la posición de incio del tablero por copiar
+*		- Hace uso de las constantes definidas en el programa para definir el tamaño de las 
+*		matrices (FIL y COL)
+*
+*******************************************************************************************************************
+copiado	equ	*
+	
+	%BACKUP
+	
+	ldy	#bitmap			; Cargo en Y la primer celda de la matriz destino
+	ldab	#36			; Defino un contador de la cantidad de valores a copiar
+
+sgte	ldaa	0,X			; Copio el contenido de la celda apuntada a la celda destino 
+	staa	0,Y			; correspondiente.
+	
+	inx				; Apunto a las siguientes celdas de origen y destino
+	iny				
+	decb				; Decremento el contador y compruebo si terminé
+	bne	sgte
+
+	%RESTORE
+
+	rts
 
 
 
@@ -25,7 +61,7 @@ delay	equ	*
 	pshy							(5 ciclos)
 	psha							(3 ciclos)
 	pshb							(3 ciclos)
-	ldaa	#18		Cargo la cantidad de repeticiones que haré con el loop1. (23 ciclos)
+	ldaa	#6		Cargo la cantidad de repeticiones que haré con el loop1. (23 ciclos)
 *								[TOTAL:17]
 
 *	[LOOP1]: n recorridos del loop1 lleva n*(9+T) ciclos, siendo T los ciclos en total del loop2. 
@@ -49,100 +85,6 @@ loop2	nop			retardo 		(2 ciclos)
 	rts			Retorno de la rubrutina		(5 ciclos)
 *								[TOTAL:29]
 
-
-
-
-
-
-
-*************************************************************************
-*		# TESTED WORKING STABLE #	Sun 06  21:11		*
-*************************************************************************
-*		PUSH FROM RIGHT				* Nota: la subrutina esta forzada
-* agrega un byte por la derecha de un vector de 	*	para vectores de longitud 2
-* longitud 2, desplazandolo todos sus elementos hacia 	*	pero dicho valor se puede cambiar
-* la izquierda						*	o pasar como parametro si se desea
-* Params: 						*	mejorar el programa para vectores
-*	- [AccIY]: puntero al vector			*	de longitud N
-* 	- [AccA]: byte a agregar.			*
-* Nota: No devuelve valores, no es necesario liberar el *
-* 	stack luego de invocarla			*
-*********************************************************
-* [A] 0 <- (X) [FP]
-* [XH]
-* [XL]
-* [PCH]
-* [PCL]
-push_R	EQU	*
-	pshx		;backup de X
-	psha		;guardo el valor de A (byte a cargar)
-	tsx
-	pshy		;backup de Y (posición de memoria del vector)
-	pshb		;backup de B
-
-	ldab	#1	;cargo la cantidad de repeticiones del ciclo (vectorSize-1)
-
-L01	ldaa	1,y	;copio el valor siguiente
-	staa	0,y	;y lo desplazo hacia la izquierda (posición anterior)
-	iny		;voy a la sig. posición
-	decb		;decremento la cantidad de ciclos restantes
-	bne	L01	;si no son cero, repito
-
-
-	ldaa	0,x	;leo el byte del input que debo pushear
-	staa	0,y	;lo escribo en la última posición
-
-	pulb		;recupero todos los backups
-	puly
-	pula
-	pulx
-	rts
-
-
-
-*************************************************************************
-*		# TESTED WORKING STABLE #	Sun 06  21:11		*
-*************************************************************************
-*		PUSH FROM LEFT				*
-* agrega un byte por la izquierda de un vector de 	*
-* longitud 2, moviendo todos los elementos a la derecha	*
-* Params: 						*
-* 	- [AccA]: byte a agregar.			*
-*	- [AccIY]: puntero al vector			*
-* Nota: No devuelve valores, no es necesario liberar el *
-* 	stack luego de invocarla			*
-*********************************************************
-* [A] 0 <- (X)
-* [XH]
-* [XL]
-* [PCH]
-* [PCL]
-push_L	EQU	*
-	pshx		;backup de X
-	psha		;guardo el valor de A (byte a cargar)
-	tsx
-	pshy		;backup de Y
-	pshb		;backup de B
-
-	ldab	#1	;cargo la cantidad de repeticiones del ciclo (vectorSize-1)
-	aby		agrego el desfase
-	dey		resto 1 (porque necesito posicionarme en la posición anterior, no en la última)
-
-L03	ldaa	0,y	;copio el valor de la posición actual
-	staa	1,y	;y lo guardo en la posición siguiente (a la derecha)
-	dey		;voy a la posición izquierda (anterior)
-	decb		;decremento la cantidad de ciclos restantes
-	bne	L03	;si no son cero, repito
-
-
-	ldaa	0,x	;leo el byte del input que debo pushear
-	staa	1,y	;lo escribo en la primera posición
-
-	pulb		;recupero todos los backups
-	puly
-	pula
-	pulx
-	rts
 
 
 

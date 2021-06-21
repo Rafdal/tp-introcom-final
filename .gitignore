@@ -10,7 +10,7 @@
 !macros.def
 
 ## Modules
-!teclado1.msa
+!efectos.msa
 !utils.msa
 !string.msa
 !game.msa

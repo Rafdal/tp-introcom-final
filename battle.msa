@@ -1,11 +1,15 @@
 	p68h11
 	
 	extern	initdis,outchar,delay,bitmap,ganador,_turno,waitkey
+	extern	clrdis,displ,print
+	extern	espiral,pintar,copiado
 
-	public	disp,coor2,coor1,copiado,play1,play2
-	public	displ,frase2,turn,frase1
-	public	espiral,winner1,winner2
-	public	canhun1,canhun2
+	extern	frase1,frase3
+
+	public	disp,coor2,coor1,play1,play2
+	public	turn
+	public	winner1,winner2
+	public	canhun1,canhun2,titan1,titan2
 
 $const.def
 $macros.def
@@ -18,31 +22,30 @@ $macros.def
 *===========================================================================================================
 main	equ	*	
 	
-	lds	#stackp			; inicializamos el stack pointer
-	jsr	initdis			; inicializamos el teclado y display
+	lds	#stk_ini			; inicializamos el stack pointer
 
-inicio	jsr	clear			; borramos los espacios de memoria por utilizar
-	jsr	limpio			; inicializamos el bitmap y las matrices de los jugadores poniéndo todas sus casillas en azul
+inicio	jsr	setup			; borramos los espacios de memoria por utilizar
+*					; inicializamos el bitmap y las matrices de los jugadores poniéndo todas sus casillas en azul
 	
-	ldaa	#1			; indicamos al programa que es el turno del jugador 1 al comienzo de cada partida
-	staa	turn			; guardando en la variable "turn" el número 1
-	ldx	#frase1
-	jsr	displ			; imprimos en el display la frase que indica al usuario que es turno de jugador 1.
-
-teclado	jsr	waitkey			; esperamos que se presione el teclado
+loop	equ	*
+	jsr	waitkey			; esperamos que se presione el teclado
 	jsr	_eval			; si se presionó una tecla, se analiza qué tecla se presionó y cómo proseguir
 	bcs	inicio			; si se apretó reset y se confirmó, volvemos a empezar de 0
 	jsr	ganador			; analizamos si hubo un ganador
 	bcs	inicio			; en caso de haber ganador y de indicado por el display el mismo, vamos a reiniciar el juego
-	bra	teclado			; si no hubo ganador, volvemos a analizar el teclado
+	bra	loop			; si no hubo ganador, volvemos a analizar el teclado
+
 
 
 *****************************************************************************************
 * 
-*	Clear: vacía todas las posiciones de memoria utilizadas para almacenar variables
+*	Setup: vacía todas las posiciones de memoria utilizadas para almacenar variables
 * 
 *****************************************************************************************
-clear	equ	*
+setup	equ	*
+	%BACKUP				; Backups
+
+	jsr	initdis			; inicializamos el teclado y display
 
 	clr	coor1
 	clr	coor2
@@ -54,18 +57,6 @@ clear	equ	*
 	clr	canhun2		; vaciamos la memoria
 	jsr	clrdis		; vaciamos el display
 	
-	rts
-
-******************************************************************************************************
-* 
-*	limpio: pone en azul todas las posiciones de los tableros y el bitmap
-*		- Usa como parámetros las posiciones de las matrices, cuyos rótulos fueron definidos.
-* 
-*******************************************************************************************************
-limpio	equ	* 
-
-	%BACKUP				; Backups
-
 	ldx	#play1			; cargo en el registro y el tablero de player 1
 	ldab	#COL*FIL*EL_SIZE	; inicio un contador del tamaño de la matriz
 	
@@ -97,6 +88,10 @@ azul3	ldaa	#AZUL
 	decb
 	bne	azul3
 
+	ldaa	#1			; indicamos al programa que es el turno del jugador 1 al comienzo de cada partida
+	staa	turn			; guardando en la variable "turn" el número 1
+	ldx	#frase1
+	jsr	displ			; imprimos en el display la frase que indica al usuario que es turno de jugador 1.
 	%RESTORE			; Restore
 	rts
 
@@ -198,38 +193,6 @@ exit	%RESTORE
 
 
 
-*####################################
-*-	T O    D O 
-*####################################
-*
-*	Revisar si meter en utils.msa y el problema de la cosntantes
-*
-*******************************************************************************************************************
-*
-* 	Subrutina copiado: Copia el contenido de una matriz a al Bitmap
-*		- Recibe por X la posición de incio del tablero por copiar
-*		- Hace uso de las constantes definidas en el programa para definir el tamaño de las 
-*		matrices (FIL y COL)
-*
-*******************************************************************************************************************
-copiado	equ	*
-	
-	%BACKUP
-	
-	ldy	#bitmap			; Cargo en Y la primer celda de la matriz destino
-	ldab	#FIL*COL*EL_SIZE	; Defino un contador de la cantidad de valores a copiar
-
-sgte	ldaa	0,X			; Copio el contenido de la celda apuntada a la celda destino 
-	staa	0,Y			; correspondiente.
-	
-	inx				; Apunto a las siguientes celdas de origen y destino
-	iny				
-	decb				; Decremento el contador y compruebo si terminé
-	bne	sgte
-
-	%RESTORE
-
-	rts
 
 
 
@@ -645,211 +608,6 @@ endlim	%RESTORE
 
 	rts
 
-**************************************************************************************************************
-*
-*	displ: imprime en el display una frase desplazándose de derecha a izquierda
-*		-Recibe por X la primera posición de memoria de la frase a imprimir
-*
-**************************************************************************************************************
-displ	equ	*
-
-	%BACKUP	
-	
-	pshx			; Copiamos el contenido de X a Y mediante el stack
-	puly
-	xgdx			; Restamos 3 al contenido de X para apuntar 3 posiciones antes del primer caracter
-	subd	#3		; para que la subrutina print imprima 3 posiciones vacías al comienzo.
-	xgdx
-
-sigo	ldaa	#CICLOS		; Hacemos un delay de 1 segundo (2 ciclos de 0,5 segundos)
-	jsr	delay
-	pshy			; paso al stack la posición a partir de la cual está permitido imprimir
-	jsr	print		; imprimo 4 caracteres en el display a partir de la "posición actual de la frase"
-	tsy			; Creo un frame pointer para poder comparar X con la primera posición de la frase
-*	...			; y así no imprimir las posiciones anteriores a la frase
-	inx			; Incremento X para apuntar al siguiente caracter
-	cpx	0,y		; Analizo si la posicion apuntada pertenece a la frase
-	puly			; Recupero Y del stack para "balancearlo" y no generar conflictos
-	bmi	sigo		; Si la posicion apuntada no pertenece a la frase, no imprimo ningun caracter
-	ldaa	0,x		; Si pertenece, comparamos el contenido con le terminador, si coincide, 
-	cmpa	#TERM		; no imprimimos ningún caracter en el display y salimos,
-	beq	listo
-	bra	sigo		; Si no es el terminador, analizo el siguiente
-
-listo	%RESTORE
-	rts
-
-*****************************************************************************************************************
-*
-*	print: Imprime en el display 4 carácteres de una frase en el orden que aparecen en memoria.
-*		Deja espacios en blanco si los primeros carácteres apuntado están fuera de la frase,
-*		y deja espacios vacíos luego de encontrar el terminador de la frase.
-*
-*		-Recibe por Stack la posición del primer carácter de la frase original, a partir de la cuál está
-*			permitido imprimir caráteres
-*		-Recibe por X la posición del primer carácter apuntado (puede estar antes de la frase original)
-*
-******************************************************************************************************************
-print	equ	*
-
-	%BACKUP
-	
-	tsy			; creo un frame pointer
-	
-	jsr	clrdis		; vacío el display
-	ldab	#INIDIS		; Cargo en B la posición de más a la izquierda del display
-
-imprim	cpx	8,Y		; Comparo X con la posición del primer caracter de la frase
-	bmi	incremx		; si es menor, quiere decir que hay que dejar el espacio en blanco: salteo
-	
-	ldaa	0,x		; Cargo en AccA el caracter que quiero imprimir
-	cmpa	termin2
-	beq	finprnt		; Si el caracter cargado es el terminador, voy al final de la subrutina
-	jsr	outchar		; Si no es el terminador, imprimo el caracter
-
-incremx	inx			; Apunto X al siguiente caracter
-	decb			; Apunto hacia la siguiente posición del display.
-	bmi	finprnt		; Si ya no existen posiciones, salgo
-	bra	imprim		; repito con el siguente caracter
-
-finprnt	%RESTORE
-	
-	rts
-
-***********************************
-*
-*	Clrdis: limpia el display
-*
-***********************************
-clrdis	equ	*
-
-	psha			; hago backup de los registros
-	pshb
-
-	ldaa	#' '		; cargo en A el carácter vacío
-	ldab	#INIDIS		; cargo B con la posición más a la izquierda del display
-
-clean	jsr	outchar		; imprimo el caracter
-	decb			; apunto una posición más a la derecha
-	bmi	clr		; si no hay más posiciones, termino
-	bra	clean		; repito
-
-clr	pulb			; recupero los registros
-	pula
-	rts
-
-***************************************************************************************************************************************************
-*
-*	Espacio de subrutinas destinadas al espiral que muestra al jugador ganador
-*
-*****************************************************************************************************************************************************
-*
-*	Movimiento del espiral: El espiral funciona en sentido horario, comenzando su movimiento desde una posición central del bitmap, 
-*		moviéndose en un patrón repetitivo: arriba, derecha, abajo, izquierda.
-*		La magnitud del desplazamiento funciona de a pares: arriba/derecha y abajo/izquierda, que tienen la misma magnitud, incrementando 
-*		esta cantidad a medida que pasamos de una pareja a otra.
-*
-******************************************************************************************************************************************************
-espiral	equ	*
-	
-	%BACKUP			; hago backup de los registros
-	
-	ldaa	canhun1		; analizo quién fue el ganador
-	cmpa	#6			
-	bne	gana2
-
-gana1	equ	*		; Cargo la matriz ganadora en 
-	ldx	#matg1		; el Registro X
-	stx	matgan		; y su espacio de memoria reservado (matgan)
-	bra	ini_esp		
-gana2	equ	*
-	ldx	#matg2
-	stx	matgan
-
-ini_esp	equ	*		; inicia el espiral
-	clr	contesp		; pongo en 0 el contador de la magnitud del desplazamiento
-	clr	contmov		; y el contador parcial de movimientos
-
-	ldaa	#4		; cargo las coordenadas de la posición central (Fila 4(3),Columna 3(2))
-	deca			; desde donde inicia el espiral
-	staa	fil_esp		; en las posiciones designadas para coordenadas
-	ldab	#3
-	decb
-	stab	col_esp
-	%POSIC			; posiciono X en las coordenadas provistas de la matriz ganadora
-	jsr	pintar		; copio el contenido de la coordenada de la matriz gan. en el bitmap
-
-up	equ	*
-	inc	contesp		; incremento el contador de movimientos que realizará en esa dirección
-	ldaa	contesp		; y lo cargo en 
-	staa	contmov		; el contador parcial
-sigueup	dec	fil_esp		; decremento la coordenada fila (desplazo hacia arriba en la matriz)
-	%POSIC			; posiciono X en las coordenadas provistas de la matriz ganadora
-	jsr	pintar		; copio el contenido de la coordenada de la matriz gan. en el bitmap
-	dec	contmov		; decremento el contador parcial de movimientos
-	bne	sigueup		; si siguen quedando movimientos, repito el proceso
-
-right	equ	*		
-	ldaa	contesp		; cargo el contador de movimientos en esa dirección
-	staa	contmov		; en el contador parcial
-sigueri	inc	col_esp		; incremento la coordenada columna (desplazo hacia la derecha en la matriz)
-	%POSIC			; posiciono X en las coordenadas provistas de la matriz ganadora
-	jsr	pintar		; copio el contenido de la coordenada de la matriz gan. en el bitmap
-	dec	contmov		; decremento el contador parcial de movimientos
-	bne	sigueri		; si siguen quedando movimientos, repito el proceso
-	
-down	equ	*
-	inc	contesp		; incremento el contador de movimientos que realizará en esa dirección
-	ldaa	contesp		; y lo cargo en 
-	staa	contmov		; el contador parcial
-siguedo	inc	fil_esp		; incremento la coordenada fila (desplazo hacia abajo en la matriz)
-	%POSIC			; posiciono X en las coordenadas provistas de la matriz ganadora
-	jsr	pintar		; copio el contenido de la coordenada de la matriz gan. en el bitmap
-	bcs	finesp		; si hay carry, significa que terminamos el espiral
-	dec	contmov		; decrementamos el contador parcial de movimientos en esa dirección
-	bne	siguedo		; si nos quedan movimientos, repetimos el proceso
-	
-left	equ	*
-	ldaa	contesp		; cargo el contador de movimientos en esa dirección
-	staa	contmov		; en el contador parcial
-siguele	dec	col_esp		; decremento la coordenada columna (desplazo hacia la izquierda en la matriz)
-	%POSIC			; posiciono X en las coordenadas provistas de la matriz ganadora
-	jsr	pintar
-	dec	contmov
-	bne	siguele		; si siguen quedando movimientos, repito el proceso
-	jmp	up		; caso contrario, voy a up, para repetir el loop
-	
-finesp	equ	*	
-	%RESTORE		; restauro los registros
-	rts			; salgo de la subrutina
-
-*****************************************************************************************************************
-*
-*	Subrutina Pintar: toma el contenido (color) de un byte de la matriz ganadora (apuntado por x)
-*	y lo copia en las mismas coordenadas pero del bitmap.
-*
-******************************************************************************************************************
-pintar	equ	*
-	%BACKUP				; hago backup de los registros
-	ldaa	#CICLOS
-	jsr	delay			; hago un delay antes de pintar
-	ldy	#BITMAP			; cargo Y con la celda inicial del bitmap
-	ldaa	fil_esp			; cargo A con la coordenada de fila
-	ldab	#COL*EL_SIZE
-	mul				
-	aby				; y me posiciono en la celda inicial de esa fila
-	ldab	col_esp			
-	aby				; le sumo la coordenada columna. Esta posicionado.
-	ldaa	0,X			; Copio el contenido de la celda apuntada por X
-	staa	0,Y			; en la celda apuntada por Y 
-	cpy	#FINMAP			; Si la celda apuntada por Y es la ultima a colorear
-	bne	finpint
-	sec				; seteo el carry
-	bra 	endpint			
-finpint	equ	*
-	clc				; sino, lo dejo en 0
-endpint	%RESTORE			; restauro los registros
-	rts				; salgo de la subrutina
 
 *==========================================================================================================================
 
@@ -872,15 +630,6 @@ canhun2	rmb	1		; Contador de barcos hundidos por el player 2
 titan1	rmb	1		; Contador de veces que el jugador 1 toca un TITANIC
 titan2	rmb	1		; Contador de veces que el jugador 2 toca un TITANIC
 
-*____________________________________________
-*
-*	Variables para la subrutina espiral
-*____________________________________________
-contesp	rmb	1		; Contador absoluto de cantidad de mov. para espiral
-contmov	rmb	1		; Contador parcial de cantidad de mov. para espiral
-col_esp	rmb	1		; Coordenadas para espiral. Columnas
-fil_esp	rmb	1		; Coordenadas para espiral. Filas
-matgan	rmb	1		; Dirección de inicio de matriz ganadora
 
 *********************************************************************************************
 *
@@ -888,7 +637,7 @@ matgan	rmb	1		; Dirección de inicio de matriz ganadora
 *
 *********************************************************************************************
 stack	rmb	50
-stackp	equ	*-1
+stk_ini	equ	*-1
 
 ************************************************************
 *
@@ -897,6 +646,15 @@ stackp	equ	*-1
 ************************************************************
 play1	rmb	COL*FIL*EL_SIZE		; Inicializo tablero del jugador 1
 play2	rmb	COL*FIL*EL_SIZE		; Inicializo tablero del jugador 2
+*_______________________________________________
+*
+* Frase de ganador
+*______________________________________________
+
+winner1	fcc	'GANADOR PLAYER 1'
+	fcb	0
+winner2	fcc	'GANADOR PLAYER 2'
+	fcb	0
 
 
 *******************************************************************
@@ -914,7 +672,7 @@ play2	rmb	COL*FIL*EL_SIZE		; Inicializo tablero del jugador 2
 	
 	fcb	___,___,___,___,___,SUB		; C
 	
-	fcb	___,TIT,TIT,TIT,TIT,___		; D
+	fcb	___,TIT,TIT,TIT,___,___		; D
 	
 	fcb	SUB,___,___,___,___,___		; E
 	
@@ -930,7 +688,7 @@ play2	rmb	COL*FIL*EL_SIZE		; Inicializo tablero del jugador 2
 
 *		 1   2   3   4   5   6
 
-	fcb	TIT,___,___,___,SUB,___		; A
+	fcb	___,___,___,___,SUB,___		; A
 	
 	fcb	TIT,___,___,___,___,___		; B
 	
@@ -943,61 +701,6 @@ play2	rmb	COL*FIL*EL_SIZE		; Inicializo tablero del jugador 2
 	fcb	CAR,CAR,___,___,___,SUB		; F
 
 
-	rseg	CONST
-*******************************************************
-*
-*	ZONA DE CONSTANTES
-*
-*********************************************************
-*_______________________________________________
-*
-* Frase de ganador
-*______________________________________________
-
-winner1	fcc	'GANADOR PLAYER 1!!! '
-	fcb	0
-winner2	fcc	'GANADOR PLAYER 2!!! '
-	fcb	0
-
-*_______________________________________________
-*
-* Frase de turnos
-*______________________________________________
-frase1	fcc	'TURNO PLAYER 1'
-termin1	fcb	0
-
-frase2	fcc	'TURNO PLAYER 2'
-termin2	fcb	0
-
-*_______________________________________________
-*
-* Frase de RESET
-*______________________________________________
-frase3	fcc	'PULSE RESET PARA CONFIRMAR'
-	fcb	0
-
-
-********************************************************************
-*
-*	TABLEROS GANADORES (imagen)
-*
-********************************************************************
-	
-matg1	equ	*					; matriz para P1 ganador
-	fcb	ROJOC,ROJOC,ROJOC,NEGRO,NEGRO,ROSAC
-	fcb	ROJOC,NEGRO,ROJOC,NEGRO,ROSAC,ROSAC
-	fcb	ROJOC,NEGRO,ROJOC,NEGRO,NEGRO,ROSAC
-	fcb	ROJOC,ROJOC,ROJOC,NEGRO,NEGRO,ROSAC
-	fcb	ROJOC,NEGRO,NEGRO,NEGRO,NEGRO,ROSAC
-	fcb	ROJOC,NEGRO,NEGRO,NEGRO,NEGRO,ROSAC
-
-matg2	equ	*					; matriz para P2 ganador
-	fcb	AMAR,AMAR,AMAR,ROSAC,ROSAC,ROSAC
-	fcb	AMAR,NEGRO,AMAR,NEGRO,NEGRO,ROSAC
-	fcb	AMAR,NEGRO,AMAR,NEGRO,NEGRO,ROSAC
-	fcb	AMAR,AMAR,AMAR,ROSAC,ROSAC,ROSAC
-	fcb	AMAR,NEGRO,NEGRO,ROSAC,NEGRO,NEGRO
-	fcb	AMAR,NEGRO,NEGRO,ROSAC,ROSAC,ROSAC
 
 *===================================================================================================================
 

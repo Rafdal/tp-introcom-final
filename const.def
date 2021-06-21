@@ -69,7 +69,7 @@ ROSAC	equ	00111010b	; Rosa claro
 SUBMAR	equ	01000000b
 CARGUER	equ	10000000b
 TITANIC	equ	11000000b
-TAMTIT	equ	4		; Cantidad de celdas que ocupa un Titanic
+TAMTIT	equ	3		; Cantidad de celdas que ocupa un Titanic
 CTOCADO	equ	10111100b	; Equivalencia para partes de un carguero tocado pero no hundido
 *_________________________________________________________________________
 *
