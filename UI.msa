@@ -6,9 +6,9 @@
 
         p68h11
 
-	public	initdis,waitkey,outchar,println,clrdis,bitmap,displ,print
+	public	initdis,waitkey,outchar,println,clrdis,bitmap,displ,print,asksure
 
-	extern	delay
+	extern	delay,txtconf
 
 ******* Ports ***************************
 
@@ -64,6 +64,22 @@ bitmap	rmb	COL*FIL*EL_SIZE		; Inicializo la matriz del bitmap
 	rseg	CODE
 
 
+
+
+*		si se confirma la accion, salimos con el carry en 1.
+*		si no se confirma, salimos sin carry.
+asksure	equ	*
+	%BACKUP
+	ldx	#txtconf	; Imprimimos en el display una frase que pide una confirmación
+	jsr	displ
+	jsr	waitkey		; Esperamos a que se presione una tecla
+	cmpa	#RESET		
+	clc
+	bne	ret		; Si la tecla pulsada no fue RESET salimos sin carry
+	sec			; Si se quiere hacer reset, seteamos el carry en 1 
+
+ret	%RESTORE
+	rts
 
 
 
