@@ -74,6 +74,7 @@ asksure	equ	*
 	jsr	displ
 	jsr	waitkey		; Esperamos a que se presione una tecla
 	cmpa	#RESET		
+	clc
 	bne	ret		; Si la tecla pulsada no fue RESET salimos sin carry
 	sec			; Si se quiere hacer reset, seteamos el carry en 1 
 

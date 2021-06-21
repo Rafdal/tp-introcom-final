@@ -118,8 +118,13 @@ _eval	equ	*
 *______________________________________________________________________________________________________________
 	cmpa	#RESET		; analizamos si la tecla preisonada fue RESET
 	bne	noreset
-	jsr	sireset		; si lo fue, vamos a realizar el RESET
+	jsr	asksure		; pregunto al usuario si esta seguro de resetear
+* jsr	sireset		; si lo fue, vamos a realizar el RESET
 	bcs	fineval		; si se confirma el RESET, salimos con el carry en 1.
+	ldaa	turn
+	adda	#'0'		; agrego el desfase ASCII
+	ldab	#3		; apunto a la posicion izquierda del display
+	jsr	outchar
 	bra	salir		; si no se confirma, salimos.
 	
 noreset	cmpa	#P1_KEY		; analizamos si la tecla presionada fue P1_KEY
@@ -169,19 +174,10 @@ fineval	equ	*
 sireset equ	*
 	%BACKUP
 	
-	jsr	asksure		; pregunto al usuario si esta seguro
+	
 
-	bcs	exit		; si esta seguro salgo con carry=1
-
-endsinr	ldaa	turn				
-	ldab	#$30
-	aba			; pasamos a carácter ASCII el turno del jugador
-* 	ldab	#3
-* 	jsr	outchar		; Imprimo en la posición de más a la izquierda del display el turno para dejar todo
-* *	...			; como estaba antes de presionar reset
-* 	clr	coor1		; Limpiamos las posiciones de memoria de las coordenadas
-* 	clr	coor2
-* 	clc			; Seteamos el carry en 0 indicando que no se confirmó el reinicio.
+* bcs	exit		; si esta seguro salgo con carry=1		; Seteamos el carry en 0 indicando que no se confirmó el reinicio.
+	
 exit	%RESTORE
 	rts
 
