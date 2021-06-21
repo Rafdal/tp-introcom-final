@@ -1,7 +1,7 @@
 	p68h11
 	
 	extern	initdis,outchar,delay,bitmap,ganador,_turno,waitkey
-	extern	clear,copiado
+	extern	clear,copiado,clrdis
 	extern	espiral,pintar
 
 	extern	frase1,frase3
@@ -668,28 +668,6 @@ incremx	inx			; Apunto X al siguiente caracter
 
 finprnt	%RESTORE
 	
-	rts
-
-***********************************
-*
-*	Clrdis: limpia el display
-*
-***********************************
-clrdis	equ	*
-
-	psha			; hago backup de los registros
-	pshb
-
-	ldaa	#' '		; cargo en A el carácter vacío
-	ldab	#INIDIS		; cargo B con la posición más a la izquierda del display
-
-clean	jsr	outchar		; imprimo el caracter
-	decb			; apunto una posición más a la derecha
-	bmi	clr		; si no hay más posiciones, termino
-	bra	clean		; repito
-
-clr	pulb			; recupero los registros
-	pula
 	rts
 
 *==========================================================================================================================
