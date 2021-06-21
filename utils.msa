@@ -3,9 +3,8 @@
 *************************************************************************
 	p68h11
 
-	public delay,clear,copiado
-	extern clrdis,bitmap
-	extern coor1,coor2,turn,disp,titan1,titan2,canhun1,canhun2
+	public delay,copiado
+	extern bitmap
 
 $macros.def
 
@@ -85,30 +84,6 @@ loop2	nop			retardo 		(2 ciclos)
 	pulx							(5 ciclos)
 	rts			Retorno de la rubrutina		(5 ciclos)
 *								[TOTAL:29]
-
-
-
-
-
-*****************************************************************************************
-* 
-*	Clear: vacía todas las posiciones de memoria utilizadas para almacenar variables
-* 
-*****************************************************************************************
-clear	equ	*
-
-	clr	coor1
-	clr	coor2
-	clr	turn
-	clr	disp
-	clr	titan1
-	clr	titan2
-	clr	canhun1	
-	clr	canhun2		; vaciamos la memoria
-	jsr	clrdis		; vaciamos el display
-	
-	rts
-
 
 
 
