@@ -1,7 +1,7 @@
 	p68h11
 
 	public	espiral,pintar
-	public	frase1,frase2,frase3
+	public	frase1,frase2,txtconf
 	extern	delay,canhun1
 
 $const.def
@@ -178,11 +178,8 @@ termin1	fcb	0
 frase2	fcc	'TURNO PLAYER 2'
 termin2	fcb	0
 
-*_______________________________________________
-*
-* Frase de RESET
-*______________________________________________
-frase3	fcc	'PULSE RESET PARA CONFIRMAR'
+* 		; Frase de confirmacion
+txtconf	fcc	'PRESIONE NUEVAMENTE PARA CONFIRMAR'
 	fcb	0
 
 
