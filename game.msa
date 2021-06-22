@@ -8,10 +8,48 @@
 	extern	espiral,winner1,winner2
 	extern	canhun1,canhun2
 
-	public	setTurn,testWin
+	public	setTurn,testWin,inRange
 
 $const.def
 $macros.def
+
+
+
+**************************************************************************************************
+*
+*	Subrutina inRange: Comprueba que las coordenadas recibidas por AccA (coor1) y AccB (coor2)
+*		   estén dentro de la matriz de jugador.
+*		- Recibe por A la coordenada de la fila y por B la coordenada de la columna
+*		- Devuelve el bit de Carry en 1 si se encuentrá por fuera del tablero
+*			o en 0 si se encuentra dentro de los límites
+*
+**************************************************************************************************
+inRange	equ	*
+
+	%BACKUP
+	
+	cmpa	#$A		; Comparamos la primera coordenada con la mínima posible
+	bmi	afuera		; Si es menor, salimos indicando que no pertenece a la matriz
+	cmpa	#$F		; Comparamos la primera coordenada con la mayor posible
+	bhi	afuera		; Si es mayor, salimos indicando que no pertenece a la matriz
+	cmpb	#1		; Comparamos la segunda coordenada con la mínima posible
+	bmi	afuera		; Si es menor, salimos indicando que no pertenece a la matriz
+	cmpb	#6		; Comparamos la segunda coordenada con la máxima posible
+	bhi	afuera		; Si es mayor, salimos indicando que no pertenece a la matriz
+	bra	adentro		; Si no se cumplió ninguna de las condiciones anteriores, las coordenadas
+*	...			; son correctas
+
+*	Zona donde las coordenadas recibidas no son válidas
+afuera	sec			; Seteamos el carry en 1 indicando que hubo error
+	bra	endlim		; Salimos de la subrutina
+
+*	Zona donde las coordenadas recibidas son válidas
+adentro	clc			; Seteamos el carry en 0 indicando que no hubo error
+
+endlim	%RESTORE
+	rts
+
+
 
 ***************************************************************************************************************
 *

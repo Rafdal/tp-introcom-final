@@ -4,6 +4,8 @@
 	extern	clrdis,displ,print
 	extern	espiral,pintar,copiado
 
+	extern	inRange
+
 	extern	frase1
 
 	public	shot_ID,coor2,coor1,play1,play2
@@ -22,10 +24,10 @@ $macros.def
 *===========================================================================================================
 main	equ	*	
 	
-	lds	#stk_ini			; inicializamos el stack pointer
+	lds	#stk_ini		; inicializamos el stack pointer
 
 init	jsr	setup			; borramos los espacios de memoria por utilizar
-*					; inicializamos el bitmap y las matrices de los jugadores poniéndo todas sus casillas en azul
+*					; inicializamos el bitmap y las matrices de los jugadores poniéndo todas sus casillas en negro
 	
 loop	equ	*
 	jsr	waitkey			; esperamos que se presione el teclado
@@ -61,7 +63,7 @@ setup	equ	*
 	
 L01	ldaa	0,y			; cargo el contenido del elemento de la matriz
 	anda	#MASK			; mantengo los 2 primeros bits que indican el tipo de barco
-	oraa	#AZUL			; cambio el color a azul
+	oraa	#NEGRO			; cambio el color a negro
 	staa	0,y			; lo imprimo en el tablero de player 1
 	iny
 	decb				; Decremento el contador
@@ -72,7 +74,7 @@ L01	ldaa	0,y			; cargo el contenido del elemento de la matriz
 
 L02	ldaa	0,y
 	anda	#MASK			; mantengo los 2 primeros bits que indican el tipo de barco
-	oraa	#AZUL			; cambio el color a azul
+	oraa	#NEGRO			; cambio el color a negro
 	staa	0,y			; lo imprimo en el tablero de player 2
 	iny
 	decb
@@ -81,7 +83,7 @@ L02	ldaa	0,y
 	ldy	#bitmap
 	ldab	#COL*FIL*EL_SIZE	; inicio un contador del tamaño de la matriz
 
-L03	ldaa	#AZUL
+L03	ldaa	#NEGRO
 	staa	0,y
 	iny
 	decb
@@ -123,6 +125,9 @@ evalKey	equ	*
 	adda	#'0'		; agrego el desfase ASCII
 	ldab	#3		; apunto a la posicion izquierda del display
 	jsr	outchar
+	clr	coor1		; borramos las coordenadas
+	clr	coor2
+	clr	shot_ID		; y el estado de disparo
 	bra	ret_C0		; si no se confirma, salimos con carry=0.
 	
 no_rst	cmpa	#P1_KEY		; analizamos si la tecla presionada fue P1_KEY
@@ -270,7 +275,7 @@ shot	equ	*
 *	...			; En este punto X apunta a la celda disparada
 	ldaa	0,X
 	anda	#MASKCOL	; Analizamos si la celda apuntada ya fue disparada anteriormente
-	cmpa	#AZUL
+	cmpa	#NEGRO
 	bne	end_dis		; Si ya esta tocada, no modifico el estado de disparo y salgo
 
 	ldaa	0,x		; En el caso de ser un disparo válido, analizo qué consecuencia tiene
@@ -355,8 +360,8 @@ hun1	inc	canhun1		; Aumentamos el contador del jugador 1 en caso de que el turno
 *	Zona donde se llega si no se tocó ningún barco en el disparo.
 *_________________________________________________________________________	
 agua	equ	*
-	oraa	#VERDE		; Si el disparo resultó en "agua" cambiamos el color de la celda
-	staa	0,X		; a verde para indicar de alguna forma que ya se disparó.
+	oraa	#AZUL		; Si el disparo resultó en "agua" cambiamos el color de la celda
+	staa	0,X		; a azul para indicar de alguna forma que ya se disparó.
 	ldaa	#1
 	staa	shot_ID		; Se indica que el jugador de turno disparó y no debe volver a jugar
 
@@ -365,7 +370,7 @@ agua	equ	*
 *	Fin de la subrutina, Limpio el display dejando el turno visible y borro las coordenadas
 *______________________________________________________________________________________________
 end_dis	equ	*	
-	ldaa	' '
+	ldaa	#' '
 	clrb
 	jsr	outchar		; Imprimimos un espacio en los lugares del display donde están las
 	incb			; coordenadas ingresadas
@@ -438,7 +443,7 @@ der	pshx			; Guardamos la posición de la celda disparada, ya que trabajaremos co
 	ldab	coor2
 	incb			; incremento en 1 la coordenada de las columnas para ir a la der. en la matriz
 
-	jsr	limite		; Evaluamos si las "nuevas coordenadas" son válidas (pertenecen a un tablero)
+	jsr	inRange		; Evaluamos si las "nuevas coordenadas" son válidas (pertenecen a un tablero)
 	
 	bcs	izq		; Si no son válidas, no analizo la celda y paso al siguiente caso
 	
@@ -455,7 +460,7 @@ izq	pulx			; Recuperamos en X la posición de la celda disparada y lo volvemos a 
 	ldaa	coor1		; Actualizamos las coordenadas a las de la celda de la izquierda
 	ldab	coor2
 	decb			; Decrementamos en 1 la coordenada de las columnas para ir a la izq. en la matriz
-	jsr	limite		; Evaluamos si las "nuevas coordenadas" son válidas (pertenecen a un tablero)
+	jsr	inRange		; Evaluamos si las "nuevas coordenadas" son válidas (pertenecen a un tablero)
 	
 	bcs	arr		; Si no son válidas, no analizamos la celda y pasamos al siguiente caso
 	
@@ -473,7 +478,7 @@ arr	pulx			; Recuperamos en X la posición de la celda disparada y lo volvemos a 
 	deca			; Decrementamos en uno la coordenada de las filas, para "subir" en la matriz
 	ldab	coor2		
 
-	jsr	limite		; Evaluamos si las "nuevas coordenadas" son válidas (pertenecen a un tablero)
+	jsr	inRange		; Evaluamos si las "nuevas coordenadas" son válidas (pertenecen a un tablero)
 
 	bcs	abaj		; Si las coordenadas no están en la matriz, salteamos la posibilidad
 
@@ -492,7 +497,7 @@ abaj	pulx			; Recuperamos en X la posición de la celda disparada y lo volvemos a
 	ldaa	coor1		; Actualizamos las coordenadas a las de la celda de abajo
 	inca			; Incrementamos en uno la coordenada de las filas, para "bajar" en la matriz
 	ldab	coor2
-	jsr	limite		; Evaluamos si las "nuevas coordenadas" son válidas (pertenecen a un tablero)
+	jsr	inRange		; Evaluamos si las "nuevas coordenadas" son válidas (pertenecen a un tablero)
 	
 	bcs	finarou		; Si las coordenadas no están en la matriz, salteamos la posibilidad
 	
@@ -533,44 +538,7 @@ finarou	pulx			; Recuperamos en X la posición de la celda disparada
 endarou	%RESTORE
 	rts
 
-**************************************************************************************************
-*
-*	Subrutina límite: Comprueba que las coordenadas recibidas por AccA (coor1) y AccB (coor2)
-*		   estén dentro de la matriz de jugador.
-*		- Recibe por A la coordenada de la fila y por B la coordenada de la columna
-*		- Devuelve el bit de Carry en 1 si se encuentrá por fuera del tablero
-*			o en 0 si se encuentra dentro de los límites
-*
-**************************************************************************************************
-limite	equ	*
 
-	%BACKUP
-	
-	cmpa	#$A		; Comparamos la primera coordenada con la mínima posible
-	bmi	afuera		; Si es menor, salimos indicando que no pertenece a la matriz
-	cmpa	#$F		; Comparamos la primera coordenada con la mayor posible
-	bhi	afuera		; Si es mayor, salimos indicando que no pertenece a la matriz
-	cmpb	#1		; Comparamos la segunda coordenada con la mínima posible
-	bmi	afuera		; Si es menor, salimos indicando que no pertenece a la matriz
-	cmpb	#6		; Comparamos la segunda coordenada con la máxima posible
-	bhi	afuera		; Si es mayor, salimos indicando que no pertenece a la matriz
-	bra	adentro		; Si no se cumplió ninguna de las condiciones anteriores, las coordenadas
-*	...			; son correctas
-*_________________________________________________________________________
-*
-*	Zona donde las coordenadas recibidas no son válidas
-*_________________________________________________________________________
-afuera	sec			; Seteamos el carry en 1 indicando que hubo error
-	bra	endlim		; Salimos de la subrutina
-_________________________________________________________________________
-*
-*	Zona donde las coordenadas recibidas son válidas
-*_________________________________________________________________________
-adentro	clc			; Seteamos el carry en 0 indicando que no hubo error
-
-endlim	%RESTORE
-
-	rts
 
 
 *==========================================================================================================================
