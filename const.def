@@ -68,8 +68,8 @@ ROSAC	equ	00111010b	; Rosa claro
 *___________________________________________________________________________
 SUBMAR	equ	01000000b
 CARGUER	equ	10000000b
-TITANIC	equ	11000000b
-TAMTIT	equ	3		; Cantidad de celdas que ocupa un Titanic
+ACORZD	equ	11000000b
+TAMACZ	equ	3		; Cantidad de celdas que ocupa un Acorazado
 CTOCADO	equ	10111100b	; Equivalencia para partes de un carguero tocado pero no hundido
 *_________________________________________________________________________
 *
@@ -103,14 +103,14 @@ EL_SIZE	equ	1
 *		- Se debe completar el rotulo CAN_BAR con la cantidad de embarcaciones por jugador
 *		- Cada submarino ocupa 1 casilla
 *		- Cada carguero debe ocupar 2 casillas contiguas
-*		- Cada jugador puede colocar 1 TITANIC como máximo.
+*		- Cada jugador puede colocar 1 ACORZD como máximo.
 *			Este debe ocupar 4 casillas. Estas 4 casillas pueden estar
 *			alineadas (4x1 o 1x4) o formando un cuadrado (2x2).
-*			Los jugadores deben ponerse de acuerdo en qué forma tendrán sus Titanics
+*			Los jugadores deben ponerse de acuerdo en qué forma tendrán sus Acorazados
 *
 *************************************************************************************************
 ___	equ	00000000b		; representa el agua
 SUB	equ	01000000b		; representa un submarino
 CAR	equ	10000000b		; representa una casilla de carguero
-TIT	equ	11000000b		; representa una casilla de Titanic
+ACZ	equ	11000000b		; representa una casilla de Acorazado
 CAN_BAR	equ	6			; cantidad de barcos por jugador
