@@ -3,26 +3,26 @@
 
 	extern waitkey
 
-	extern	disp,coor2,coor1,copiado,play1,play2
-	extern	displ,frase2,turn,frase1
+	extern	shot_ID,coor2,coor1,copiado,play1,play2
+	extern	displ,frase2,turno,frase1
 	extern	espiral,winner1,winner2
 	extern	canhun1,canhun2
 
-	public	_turno,ganador
+	public	setTurn,testWin
 
 $const.def
 $macros.def
 
 ***************************************************************************************************************
 *
-*	ganador: Evalúa si uno de los jugadores ganó la partida, y en caso de ganar, procede a indicarlo en el 
+*	testWin: Evalúa si uno de los jugadores ganó la partida, y en caso de ganar, procede a indicarlo en el 
 *		 display y en el bitmap.
 *		- Utiliza como parámetros las variables definidas al final del programa, que evalúan la cantidad
 *			de barcos hundidos de cada jugador
 *		- Devuelve el bit de Carry en 1 si hubo ganador, y en 0 si no hubo ganador aún.
 *
 ***************************************************************************************************************
-ganador	equ	*
+testWin	equ	*
 
 	%BACKUP
 
@@ -61,23 +61,23 @@ finwin	%RESTORE
 
 *************************************************************************************************************
 *
-*	_turno: cambia el turno al jugador correspondiente
+*	setTurn: cambia el turno al jugador correspondiente
 *		- Recibe por AccA la tecla presionada
-*		- Modifica la posición de memoria turn que contiene el turno actual.
+*		- Modifica la posición de memoria turno que contiene el turno actual.
 *
 **************************************************************************************************************
-_turno	equ	*
+setTurn	equ	*
 
 	%BACKUP
 
-	ldab	turn		; analizamos de quién es el turno que apretó la tecla
+	ldab	turno		; analizamos de quién es el turno que apretó la tecla
 	cmpb	#1
 	bne	jug2
 *_____________________
 *
 * Turno jugador 1
 *____________________
-jug1	ldab	disp
+jug1	ldab	shot_ID
 	cmpb	#1
 	beq	fire1		; analizamos si hubo un disparo previo errado
 	cmpa	#P1_KEY		; analizo si la tecla apretada es P1_KEY
@@ -91,7 +91,7 @@ fire1	cmpa	#P2		; si hubo disparo y se apretó P2
 *
 * Turno jugador 2
 *____________________
-jug2	ldab	disp
+jug2	ldab	shot_ID
 	cmpb	#1
 	beq	fire2		; analizamos si hubo un disparo previo errado
 	cmpa	#P2		; analizo si la tecla apretada es P2
@@ -107,7 +107,7 @@ fire2	cmpa	#P1_KEY		; si hubo disparo y se apretó P1_KEY
 * Cambio a jugador 1
 *_______________________
 tec1	ldaa	#1
-	staa	turn		; Indico en una posición de memoria que es el turno del jugador 1
+	staa	turno		; Indico en una posición de memoria que es el turno del jugador 1
 	ldx	#frase1		; mostramos la frase de jugador 1 en el display
 	jsr	displ
 	ldx	#play2		; cargamos en el bitmap el tablero del jugador 2
@@ -117,7 +117,7 @@ tec1	ldaa	#1
 * Cambio a jugador 2
 *_______________________
 tec2	ldaa	#2
-	staa	turn		; Indico en una posición de memoria que es el turno del jugador 2
+	staa	turno		; Indico en una posición de memoria que es el turno del jugador 2
 	ldx	#frase2		; mostramos la frase de jugador 2
 	jsr	displ
 	ldx	#play1		; cargamos en el bitmap el tablero del jugador 1
@@ -128,7 +128,7 @@ tec2	ldaa	#2
 change	jsr	copiado
 	clr	coor1
 	clr	coor2
-	clr	disp
+	clr	shot_ID
 
 finturn	%RESTORE
 	

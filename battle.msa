@@ -1,13 +1,13 @@
 	p68h11
 	
-	extern	initdis,outchar,delay,bitmap,ganador,_turno,waitkey,asksure
+	extern	initdis,outchar,delay,bitmap,testWin,setTurn,waitkey,asksure
 	extern	clrdis,displ,print
 	extern	espiral,pintar,copiado
 
 	extern	frase1
 
-	public	disp,coor2,coor1,play1,play2
-	public	turn
+	public	shot_ID,coor2,coor1,play1,play2
+	public	turno
 	public	winner1,winner2
 	public	canhun1,canhun2,titan1,titan2
 
@@ -15,7 +15,7 @@ $const.def
 $macros.def
 
 	rseg	CODE
-*==========================================================================================================
+*===========================================================================================================
 *
 *	MAIN "BATALLA NAVAL"
 *
@@ -24,15 +24,15 @@ main	equ	*
 	
 	lds	#stk_ini			; inicializamos el stack pointer
 
-inicio	jsr	setup			; borramos los espacios de memoria por utilizar
+init	jsr	setup			; borramos los espacios de memoria por utilizar
 *					; inicializamos el bitmap y las matrices de los jugadores poniéndo todas sus casillas en azul
 	
 loop	equ	*
 	jsr	waitkey			; esperamos que se presione el teclado
-	jsr	_eval			; si se presionó una tecla, se analiza qué tecla se presionó y cómo proseguir
-	bcs	inicio			; si se apretó reset y se confirmó, volvemos a empezar de 0
-	jsr	ganador			; analizamos si hubo un ganador
-	bcs	inicio			; en caso de haber ganador y de indicado por el display el mismo, vamos a reiniciar el juego
+	jsr	evalKey			; se evalua la tecla presionada
+	bcs	init			; si se apretó reset y se confirmó, volvemos a empezar de 0
+	jsr	testWin			; analizamos si hubo un ganador
+	bcs	init			; en caso de haber ganador y de indicado por el display el mismo, vamos a reiniciar el juego
 	bra	loop			; si no hubo ganador, volvemos a analizar el teclado
 
 
@@ -49,47 +49,46 @@ setup	equ	*
 
 	clr	coor1
 	clr	coor2
-	clr	turn
-	clr	disp
+	clr	shot_ID
 	clr	titan1
 	clr	titan2
 	clr	canhun1	
 	clr	canhun2		; vaciamos la memoria
 	jsr	clrdis		; vaciamos el display
 	
-	ldx	#play1			; cargo en el registro y el tablero de player 1
+	ldy	#play1			; cargo en el registro y el tablero de player 1
 	ldab	#COL*FIL*EL_SIZE	; inicio un contador del tamaño de la matriz
 	
-azul1	ldaa	0,x			; cargo el contenido del elemento de la matriz
+L01	ldaa	0,y			; cargo el contenido del elemento de la matriz
 	anda	#MASK			; mantengo los 2 primeros bits que indican el tipo de barco
 	oraa	#AZUL			; cambio el color a azul
-	staa	0,x			; lo imprimo en el tablero de player 1
-	inx
+	staa	0,y			; lo imprimo en el tablero de player 1
+	iny
 	decb				; Decremento el contador
-	bne	azul1			; repito hasta que el contador sea 0
+	bne	L01			; repito hasta que el contador sea 0
 
-	ldx	#play2
+	ldy	#play2
 	ldab	#COL*FIL*EL_SIZE	; inicio un contador del tamaño de la matriz
 
-azul2	ldaa	0,x
+L02	ldaa	0,y
 	anda	#MASK			; mantengo los 2 primeros bits que indican el tipo de barco
 	oraa	#AZUL			; cambio el color a azul
-	staa	0,x			; lo imprimo en el tablero de player 2
-	inx
+	staa	0,y			; lo imprimo en el tablero de player 2
+	iny
 	decb
-	bne	azul2
+	bne	L02
 
-	ldx	#bitmap
+	ldy	#bitmap
 	ldab	#COL*FIL*EL_SIZE	; inicio un contador del tamaño de la matriz
 
-azul3	ldaa	#AZUL
-	staa	0,x
-	inx
+L03	ldaa	#AZUL
+	staa	0,y
+	iny
 	decb
-	bne	azul3
+	bne	L03
 
 	ldaa	#1			; indicamos al programa que es el turno del jugador 1 al comienzo de cada partida
-	staa	turn			; guardando en la variable "turn" el número 1
+	staa	turno			; guardando en la variable "turno" el número 1
 	ldx	#frase1
 	jsr	displ			; imprimos en el display la frase que indica al usuario que es turno de jugador 1.
 	%RESTORE			; Restore
@@ -101,13 +100,13 @@ azul3	ldaa	#AZUL
 
 **************************************************************************************************************
 *
-*	_eval: evalúa qué tecla se apretó y a qué hacer según la tecla presionada.
+*	evalKey: evalúa qué tecla se apretó y a qué hacer según la tecla presionada.
 *		- Recibe por A el valor numérico de la tecla presionada en el teclado, y utiliza
 *			las equivalencias definidas como constantes al principio para poder indentificar la tecla.
 *		- Devuelve el carry en 1 si se confirmó el RESET, o en 0 si no hubo RESET.
 *
 ***************************************************************************************************************
-_eval	equ	*
+evalKey	equ	*
 
 	%BACKUP			; Hago backup de los registros
 *_____________________________________________________________________________________________________________
@@ -117,43 +116,42 @@ _eval	equ	*
 *		a esa tecla.
 *______________________________________________________________________________________________________________
 	cmpa	#RESET		; analizamos si la tecla preisonada fue RESET
-	bne	noreset
+	bne	no_rst
 	jsr	asksure		; pregunto al usuario si esta seguro de resetear
-* jsr	sireset		; si lo fue, vamos a realizar el RESET
-	bcs	fineval		; si se confirma el RESET, salimos con el carry en 1.
-	ldaa	turn
+	bcs	ret		; si se confirma el RESET, salimos con el carry en 1.
+	ldaa	turno
 	adda	#'0'		; agrego el desfase ASCII
 	ldab	#3		; apunto a la posicion izquierda del display
 	jsr	outchar
-	bra	salir		; si no se confirma, salimos.
+	bra	ret_C0		; si no se confirma, salimos con carry=0.
 	
-noreset	cmpa	#P1_KEY		; analizamos si la tecla presionada fue P1_KEY
-	bne	nop1		
-	jsr	_turno		; si lo fue, vamos al proceso de cambiar el turno
-	bra	salir		; salimos
+no_rst	cmpa	#P1_KEY		; analizamos si la tecla presionada fue P1_KEY
+	bne	no_P1		
+	jsr	setTurn		; si lo fue, vamos al proceso de cambiar el turno
+	bra	ret_C0		; salimos
 
-nop1	cmpa	#P2		; analizamos si la tecla preisonada fue P2
-	bne	nop2
-	jsr	_turno		; si lo fue, vamos al proceso de cambiar el turno
-	bra	salir		; salimos
+no_P1	cmpa	#P2		; analizamos si la tecla preisonada fue P2
+	bne	no_P2
+	jsr	setTurn		; si lo fue, vamos al proceso de cambiar el turno
+	bra	ret_C0		; salimos
 
-nop2	ldab	disp		; analizamos si hubo un disparo errado previo a la pulsación actual.
+no_P2	ldab	shot_ID		; analizamos si hubo un disparo errado previo a la pulsación actual.
 	cmpb	#1	
-	beq	salir		; si hubo, salimos y analizamos la tecla presionada, ya que se debió presionar P1_KEY, P2 o RESET
+	beq	ret_C0		; si hubo, salimos y analizamos la tecla presionada, ya que se debió presionar P1_KEY, P2 o RESET
 	
-	cmpa	#FIREKEY		; analizamos si la tecla preisonada fue FIREKEY
-	bne	nofire
-	jsr	disparo		; si lo fue, vamos a realizar el disparo
-	bra	salir		; salimos
+	cmpa	#FIREKEY	; analizamos si la tecla preisonada fue FIREKEY
+	bne	no_fire
+	jsr	runFire		; si lo fue, vamos a realizar el disparo
+	bra	ret_C0		; salimos
 *_______________________________________________________________________________________________________________
 *
 *	Como es un componente de las coordenadas por no ser una de las teclas anteriores, llamo a la subrutina coordenadas			 
 *_______________________________________________________________________________________________________________
-nofire	jsr	coord
+no_fire	jsr	setCoor
 
-salir	clc			; pongo el carry en 0 indicando que no hubo reset
+ret_C0	clc			; pongo el carry en 0 indicando que no hubo reset
 
-fineval	equ	*
+ret	equ	*
 
 	%RESTORE		; Restauro los registros que guardé al comienzo
 
@@ -163,39 +161,15 @@ fineval	equ	*
 
 
 
-
-
-**********************************************************************************************************************
-*
-*	sireset: subrutina que comienza de nuevo el juego en caso de que el usuario realice una confirmación de RESET
-*		- Devuelve el carry en 1 si se confirmó el RESET, y en 0 si se apretó cualquier otra tecla.
-*
-**********************************************************************************************************************
-sireset equ	*
-	%BACKUP
-	
-	
-
-* bcs	exit		; si esta seguro salgo con carry=1		; Seteamos el carry en 0 indicando que no se confirmó el reinicio.
-	
-exit	%RESTORE
-	rts
-
-
-
-
-
-
-
 ***************************************************************************************************************
 *
-*	Subrutina "coord": Guarda en posiciones de memoria distintas las coordenadas ingresadas en el teclado
+*	Subrutina "setCoor": Guarda en posiciones de memoria distintas las coordenadas ingresadas en el teclado
 *		- Recibe por AccA el valor de la tecla presionada (valor original del teclado)
 *		- Asigna a la tecla presionada un nuevo valor y la guarda en la posición de memoria correspondiente
 *		- Devuelve por posiciones de memoria establecidas en el main el valor de la coordenada presionada.
 *
 ***************************************************************************************************************
-coord	equ	*
+setCoor	equ	*
 	
 	%BACKUP			; Hago backup de todos los registros
 	
@@ -260,18 +234,18 @@ endcoor	equ	*
 
 *********************************************************************************************
 *
-*	Subrutina disparo: Se la llama cuando un jugador presiona FIREKEY! para realizar un 
+*	Subrutina runFire: Se la llama cuando un jugador presiona FIREKEY! para realizar un 
 *			   disparo a las coordenadas ingresadas
 *		- Recibe por coor1 y coor2 (variables) las coordenadas a las que se apuntó
 *		- Modifica una celda de la matriz del jugador contrario al de turno cuando 
 *		  se realiza un disparo
 *
 **********************************************************************************************
-disparo	equ	*
+runFire	equ	*
 	
 	%BACKUP
 	
-	ldaa	turn		; Evaluamos qué jugador tiene el turno de jugar
+	ldaa	turno		; Evaluamos qué jugador tiene el turno de jugar
 	cmpa	#1		; y posicionamos X en el tablero del jugador contrario
 	beq	player1
 
@@ -317,7 +291,7 @@ car_toc	equ	*		; carguero tocado
 	bra	hundido		; Si está hundido, hundo el carguero (pinto la celda de rojo).
 
 titatoc	equ	*
-	ldab	turn		; Evalúo de qué jugador es el turno para aumentar el contador de veces que se tocó a un TITANIC
+	ldab	turno		; Evalúo de qué jugador es el turno para aumentar el contador de veces que se tocó a un TITANIC
 	cmpb	#1
 	beq	titani1
 *_________________________________________________________________________
@@ -366,7 +340,7 @@ hundido	equ	*
 *
 *	Zona donde aumento la cantidad de hundidos por el jugador de turno
 *_________________________________________________________________________
-sink	ldaa	turn		; Se evalúa de qué jugador es el turno para aumentar su contador
+sink	ldaa	turno		; Se evalúa de qué jugador es el turno para aumentar su contador
 	cmpa	#1		; de barcos hundidos
 	beq	hun1
 
@@ -384,7 +358,7 @@ agua	equ	*
 	oraa	#VERDE		; Si el disparo resultó en "agua" cambiamos el color de la celda
 	staa	0,X		; a verde para indicar de alguna forma que ya se disparó.
 	ldaa	#1
-	staa	disp		; Se indica que el jugador de turno disparó y no debe volver a jugar
+	staa	shot_ID		; Se indica que el jugador de turno disparó y no debe volver a jugar
 
 *______________________________________________________________________________________________
 *
@@ -411,12 +385,12 @@ end_dis	equ	*
 *	Subrutina iceberg: Como su nombre lo indica, hunde al titanic.
 *		Una vez que se tocan todas las partes de un titanic, esta subrutina cambia el color
 *		de cada parte a rojo, indicando que se hundió en su totalidad.
-*		- Usa como parámetros la variable "turn", para saber qué jugador hundió un Titanic
+*		- Usa como parámetros la variable "turno", para saber qué jugador hundió un Titanic
 *
 *********************************************************************************************************
 iceberg	equ	*
 	%BACKUP
-	ldab	turn			; Analizo si es el turno del jugador 1 o 2, y me posiciono sobre
+	ldab	turno			; Analizo si es el turno del jugador 1 o 2, y me posiciono sobre
 	cmpb	#1			; la primera celda del tablero contrario
 	beq	iceb1
 
@@ -613,8 +587,8 @@ endlim	%RESTORE
 *_____________________________________________
 coor1	rmb	1		; almacena el número de fila ingresado por el usuario
 coor2	rmb	1		; almacena el número de columna ingresado por el usuario
-turn	rmb	1		; almacena de quién es el turno actual
-disp	rmb	1		; almacena un indicador de si hubo un disparo al agua
+turno	rmb	1		; almacena de quién es el turno actual
+shot_ID	rmb	1		; almacena un indicador de si hubo un disparo al agua
 canhun1	rmb	1		; Contador de barcos hundidos por el player 1
 canhun2	rmb	1		; Contador de barcos hundidos por el player 2
 titan1	rmb	1		; Contador de veces que el jugador 1 toca un TITANIC
