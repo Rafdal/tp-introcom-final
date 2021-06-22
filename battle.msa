@@ -11,49 +11,47 @@
 	public	shot_ID,coor2,coor1,play1,play2
 	public	turno
 	public	winner1,winner2
-	public	canhun1,canhun2,titan1,titan2
+	public	canhun1,canhun2,acorz1,acorz2
 
 $const.def
 $macros.def
 
 	rseg	CODE
-*===========================================================================================================
-*
-*	MAIN "BATALLA NAVAL"
-*
-*===========================================================================================================
+
+*********************************************************
+*		MAIN PROGRAM				*
+*********************************************************
 main	equ	*	
 	
-	lds	#stk_ini		; inicializamos el stack pointer
+	lds	#stk_ini		; cargo la posicion inicial del stack
 
-init	jsr	setup			; borramos los espacios de memoria por utilizar
-*					; inicializamos el bitmap y las matrices de los jugadores poniéndo todas sus casillas en negro
+init	jsr	setup			; ejecutamos las funciones de setup
 	
 loop	equ	*
-	jsr	waitkey			; esperamos que se presione el teclado
-	jsr	evalKey			; se evalua la tecla presionada
+	jsr	waitkey			; esperamos a que se presione una tecla
+	jsr	evalKey			; se evalua la tecla presionada (en AccA)
 	bcs	init			; si se apretó reset y se confirmó, volvemos a empezar de 0
 	jsr	testWin			; analizamos si hubo un ganador
-	bcs	init			; en caso de haber ganador y de indicado por el display el mismo, vamos a reiniciar el juego
+	bcs	init			; si hubo un ganador, reiniciamos el juego
 	bra	loop			; si no hubo ganador, volvemos a analizar el teclado
 
 
 
 *****************************************************************************************
-* 
-*	Setup: vacía todas las posiciones de memoria utilizadas para almacenar variables
-* 
+*					SETUP
+*	Ejecuta las funciones de configuracion inicial
+*	- borra el display
+*	- inicia las variables en cero
+*	- borra el bitmap
 *****************************************************************************************
 setup	equ	*
-	%BACKUP				; Backups
-
 	jsr	initdis			; inicializamos el teclado y display
 
 	clr	coor1
 	clr	coor2
 	clr	shot_ID
-	clr	titan1
-	clr	titan2
+	clr	acorz1
+	clr	acorz2
 	clr	canhun1	
 	clr	canhun2		; vaciamos la memoria
 	jsr	clrdis		; vaciamos el display
@@ -93,30 +91,24 @@ L03	ldaa	#NEGRO
 	staa	turno			; guardando en la variable "turno" el número 1
 	ldx	#frase1
 	jsr	displ			; imprimos en el display la frase que indica al usuario que es turno de jugador 1.
-	%RESTORE			; Restore
 	rts
 
 
 
 
-
 **************************************************************************************************************
-*
+* 
 *	evalKey: evalúa qué tecla se apretó y a qué hacer según la tecla presionada.
 *		- Recibe por A el valor numérico de la tecla presionada en el teclado, y utiliza
 *			las equivalencias definidas como constantes al principio para poder indentificar la tecla.
 *		- Devuelve el carry en 1 si se confirmó el RESET, o en 0 si no hubo RESET.
-*
+* 
 ***************************************************************************************************************
 evalKey	equ	*
 
 	%BACKUP			; Hago backup de los registros
-*_____________________________________________________________________________________________________________
-*
-*	Zona de comparación con teclas especiales.
-*		En caso de que la tecla presionada sea una especial, se salta a la subrutina correspondiente
-*		a esa tecla.
-*______________________________________________________________________________________________________________
+
+************ TEST FOR RESET **********
 	cmpa	#RESET		; analizamos si la tecla preisonada fue RESET
 	bne	no_rst
 	jsr	asksure		; pregunto al usuario si esta seguro de resetear
@@ -129,30 +121,32 @@ evalKey	equ	*
 	clr	coor2
 	clr	shot_ID		; y el estado de disparo
 	bra	ret_C0		; si no se confirma, salimos con carry=0.
-	
+
+*********** TEST FOR P1 KEY *********
 no_rst	cmpa	#P1_KEY		; analizamos si la tecla presionada fue P1_KEY
 	bne	no_P1		
 	jsr	setTurn		; si lo fue, vamos al proceso de cambiar el turno
 	bra	ret_C0		; salimos
 
+*********** TEST FOR P2 KEY *********
 no_P1	cmpa	#P2		; analizamos si la tecla preisonada fue P2
 	bne	no_P2
 	jsr	setTurn		; si lo fue, vamos al proceso de cambiar el turno
 	bra	ret_C0		; salimos
 
+******** TEST FOR MISSED SHOT *******
 no_P2	ldab	shot_ID		; analizamos si hubo un disparo errado previo a la pulsación actual.
 	cmpb	#1	
-	beq	ret_C0		; si hubo, salimos y analizamos la tecla presionada, ya que se debió presionar P1_KEY, P2 o RESET
+	beq	ret_C0		; si hubo, salimos
 	
+*********** TEST FOR FIRE KEY *********
 	cmpa	#FIREKEY	; analizamos si la tecla preisonada fue FIREKEY
 	bne	no_fire
 	jsr	runFire		; si lo fue, vamos a realizar el disparo
 	bra	ret_C0		; salimos
-*_______________________________________________________________________________________________________________
-*
-*	Como es un componente de las coordenadas por no ser una de las teclas anteriores, llamo a la subrutina coordenadas			 
-*_______________________________________________________________________________________________________________
-no_fire	jsr	setCoor
+
+*********** SET COORDINATES **************
+no_fire	jsr	setCoor		; si no fue ningun comando, entonces fue una tecla de coordenadas
 
 ret_C0	clc			; pongo el carry en 0 indicando que no hubo reset
 
@@ -164,15 +158,13 @@ ret	equ	*
 
 
 
-
-
+*=================================================================================
+*-	D O C U M E N T A R!!!! 	NO ENTENDI NADA COMO FUNCIONA ESTO
 ***************************************************************************************************************
-*
 *	Subrutina "setCoor": Guarda en posiciones de memoria distintas las coordenadas ingresadas en el teclado
 *		- Recibe por AccA el valor de la tecla presionada (valor original del teclado)
 *		- Asigna a la tecla presionada un nuevo valor y la guarda en la posición de memoria correspondiente
 *		- Devuelve por posiciones de memoria establecidas en el main el valor de la coordenada presionada.
-*
 ***************************************************************************************************************
 setCoor	equ	*
 	
@@ -182,20 +174,18 @@ setCoor	equ	*
 	bhi	numero		; para saber si es un Número o una letra
 
 	ldab	coor1		; Si la coordenada ingresada ya tiene algo, salgo para no sobreescribirla
-	bne	endcoor
+	bne	ret_sc
 
 	cmpa	#$2		; Como las asignaciones de teclas no son consecutivas, debemos evaluar a qué 
-	bhi	sgment2		; segmento pertenece.
-*_________________________
-*
-* Si es una letra (fila)
-*_________________________
-sgment1	ldab	#$A		; convertimos la tecla apretada en el número de fila
+	bhi	L04		; segmento pertenece.
+
+******** SEGMENT 1 **********
+	ldab	#$A		; convertimos la tecla apretada en el número de fila
 	aba			; Realizo una operación con el valor correspondiente al segmento al que pertenece
 	staa	coor1		; Como es una letra, la guardamos en la coordenada 1
 	bra	prt_let		; Luego de guardar la coordenada, salgo
 
-sgment2	ldab	#$9		; convertimos la tecla apretada en el número de fila
+L04	ldab	#$9		; convertimos la tecla apretada en el número de fila
 	aba			
 	staa	coor1		; la guardamos en la coordenada 1
 
@@ -204,24 +194,24 @@ prt_let	equ	*
 	aba
 	ldab	#1		; la imprimimos en el display
 	jsr	outchar
-	bra	endcoor		; salimos
+	bra	ret_sc		; salimos
 *____________________________
 *
 * Si es un número (columna)
 *____________________________
 
 numero	ldab	coor2		; Si la coordenada ingresada ya tiene algo, salgo para no sobreescribirla
-	bne	endcoor
+	bne	ret_sc
 	
 	cmpa	#$A		; Como las asignaciones de teclas no son consecutivas, debemos evaluar a qué
-	bhi	sgment4		; segmento pertenece.
+	bhi	L06		; segmento pertenece.
 
-sgment3	ldab	#7		; convertimos el valor del teclado al valor numérico de la columna
+L05	ldab	#7		; convertimos el valor del teclado al valor numérico de la columna
 	sba
 	staa	coor2		; lo guardamos en la coordenada 2
 	bra	prt_num
 	
-sgment4	ldab	#8		; convertimos el valor del teclado al valor numérico de la columna
+L06	ldab	#8		; convertimos el valor del teclado al valor numérico de la columna
 	sba	
 	staa	coor2		; lo guardamos en la coordenada 2
 
@@ -231,11 +221,13 @@ prt_num	equ	*
 	clrb
 	jsr	outchar		; lo imprimimos en la posición de más a la derecha del display
 	
-endcoor	equ	*
+ret_sc	equ	*
 	
 	%RESTORE		; Restauro los registros
 
 	rts			; Salimos de la subrutina
+
+
 
 *********************************************************************************************
 *
@@ -283,8 +275,8 @@ shot	equ	*
 	beq	agua		; Si todos los bits de la celda son 0, es agua
 	cmpa	#SUBMAR
 	beq	hundido		; Si la celda disparada contiene un submarino, pasa a estar hundido
-	cmpa	#TITANIC	
-	beq	titatoc		; Si la celda disparada contiene parte de un titanic, evalúo si lo hundí en su totalidad
+	cmpa	#ACORZD	
+	beq	acortoc		; Si la celda disparada contiene parte de un acorazado, evalúo si lo hundí en su totalidad
 *_________________________________________________________________________
 *
 *	Zona donde un jugador tocó algún carguero
@@ -295,29 +287,29 @@ car_toc	equ	*		; carguero tocado
 	bcc	nohund		; Si no está hundido, significa que lo toco parcialmente y pinto la celda de amarillo.
 	bra	hundido		; Si está hundido, hundo el carguero (pinto la celda de rojo).
 
-titatoc	equ	*
-	ldab	turno		; Evalúo de qué jugador es el turno para aumentar el contador de veces que se tocó a un TITANIC
+acortoc	equ	*
+	ldab	turno		; Evalúo de qué jugador es el turno para aumentar el contador de veces que se tocó a un ACORZD
 	cmpb	#1
-	beq	titani1
+	beq	acorzi1
 *_________________________________________________________________________
 *
-*	Zona donde el jugador 2 tocó un titanic
+*	Zona donde el jugador 2 tocó un acorazado
 *_________________________________________________________________________
-titani2	inc	titan2		; Si el jugador 2 tocó un titanic, aumento el contador de veces que lo hizo
-	ldaa	titan2
-	cmpa	#TAMTIT
-	beq	tithund		; Si el contador es igual a 4 (tamaño del titanic), significa que lo hundió
+acorzi2	inc	acorz2		; Si el jugador 2 tocó un acorazado, aumento el contador de veces que lo hizo
+	ldaa	acorz2
+	cmpa	#TAMACZ
+	beq	aczhund		; Si el contador es igual a 4 (tamaño del acorazado), significa que lo hundió
 	ldaa	0,X		; Si todavía no es igual a 4, lo tocó parcialmente (se pinta la celda de amarillo).
 	anda	#MASK	
 	bra	nohund
 *_________________________________________________________________________
 *
-*	Zona donde el jugador 1 tocó un titanic
+*	Zona donde el jugador 1 tocó un acorazado
 *_________________________________________________________________________
-titani1	inc	titan1		; Si el jugador 1 tocó un titanic, aumento el contador de veces que lo hizo
-	ldaa	titan1
-	cmpa	#TAMTIT		
-	beq	tithund		; Si el contador es igual a 4 (tamaño del titanic), significa que lo hundió
+acorzi1	inc	acorz1		; Si el jugador 1 tocó un acorazado, aumento el contador de veces que lo hizo
+	ldaa	acorz1
+	cmpa	#TAMACZ		
+	beq	aczhund		; Si el contador es igual a 4 (tamaño del acorazado), significa que lo hundió
 	ldaa	0,X		; Si todavía no es igual a 4, lo tocó parcialmente (se pinta la celda de amarillo).
 	anda	#MASK
 *____________________________________________________________________________________
@@ -334,8 +326,8 @@ nohund	oraa	#AMAR		; Se carga en AccA el color amarillo sin modificar los datos 
 *
 *	Zona donde se hunden a los barcos tocados en su totalidad
 *___________________________________________________________________________
-tithund	equ	*
-	jsr	iceberg		; Si un jugador hundió un titanic, saltamos a la subrutina que cambia el color de 
+aczhund	equ	*
+	jsr	h_acorz		; Si un jugador hundió un acorazado, saltamos a la subrutina que cambia el color de 
 	bra	sink		; todas sus celdas a rojo
 
 hundido	equ	*
@@ -386,29 +378,29 @@ end_dis	equ	*
 	rts
 
 *********************************************************************************************************
-*
-*	Subrutina iceberg: Como su nombre lo indica, hunde al titanic.
-*		Una vez que se tocan todas las partes de un titanic, esta subrutina cambia el color
+* 				HUNDIR 	ACORAZADO
+*	Subrutina h_acorz: Esta subrutina hunde al acorazado
+*		Una vez que se tocan todas las partes de un acorazado, esta subrutina cambia el color
 *		de cada parte a rojo, indicando que se hundió en su totalidad.
-*		- Usa como parámetros la variable "turno", para saber qué jugador hundió un Titanic
+*		- Usa como parámetros la variable "turno", para saber qué jugador hundió un Acorazado
 *
 *********************************************************************************************************
-iceberg	equ	*
+h_acorz	equ	*
 	%BACKUP
 	ldab	turno			; Analizo si es el turno del jugador 1 o 2, y me posiciono sobre
 	cmpb	#1			; la primera celda del tablero contrario
-	beq	iceb1
+	beq	user1
 
-iceb2	ldx	#play1
+	ldx	#play1
 	bra	hundir
 
-iceb1	ldx	#play2
+user1	ldx	#play2
 
-hundir	equ	*			; Iniciamos un contador de partes de titanic a hundir (celdas) y comienzo
-	ldab	#TAMTIT			; a recorrer la matriz, cuando hundimos todas las partes, terminamos
+hundir	equ	*			; Iniciamos un contador de partes de acorazado a hundir (celdas) y comienzo
+	ldab	#TAMACZ			; a recorrer la matriz, cuando hundimos todas las partes, terminamos
 sigiceb	ldaa	0,x
 	anda	#MASK
-	cmpa	#TITANIC
+	cmpa	#ACORZD
 	bne	noiceb
 	oraa	#ROJO			; Para hundir las partes, cambiamos el color de las celdas a rojo.
 	staa	0,x
@@ -559,8 +551,8 @@ turno	rmb	1		; almacena de quién es el turno actual
 shot_ID	rmb	1		; almacena un indicador de si hubo un disparo al agua
 canhun1	rmb	1		; Contador de barcos hundidos por el player 1
 canhun2	rmb	1		; Contador de barcos hundidos por el player 2
-titan1	rmb	1		; Contador de veces que el jugador 1 toca un TITANIC
-titan2	rmb	1		; Contador de veces que el jugador 2 toca un TITANIC
+acorz1	rmb	1		; Contador de veces que el jugador 1 toca un ACORZD
+acorz2	rmb	1		; Contador de veces que el jugador 2 toca un ACORZD
 
 
 *********************************************************************************************
@@ -604,7 +596,7 @@ winner2	fcc	'GANADOR PLAYER 2'
 	
 	fcb	___,___,___,___,___,SUB		; C
 	
-	fcb	___,TIT,TIT,TIT,___,___		; D
+	fcb	___,ACZ,ACZ,ACZ,___,___		; D
 	
 	fcb	SUB,___,___,___,___,___		; E
 	
@@ -622,11 +614,11 @@ winner2	fcc	'GANADOR PLAYER 2'
 
 	fcb	___,___,___,___,SUB,___		; A
 	
-	fcb	TIT,___,___,___,___,___		; B
+	fcb	ACZ,___,___,___,___,___		; B
 	
-	fcb	TIT,___,___,SUB,___,CAR		; C
+	fcb	ACZ,___,___,SUB,___,CAR		; C
 	
-	fcb	TIT,___,___,___,___,CAR		; D
+	fcb	ACZ,___,___,___,___,CAR		; D
 	
 	fcb	___,___,___,___,___,___		; E
 	
