@@ -69,7 +69,7 @@ bitmap	rmb	COL*FIL*EL_SIZE		; Inicializo la matriz del bitmap
 *		si se confirma la accion, salimos con el carry en 1.
 *		si no se confirma, salimos sin carry.
 asksure	equ	*
-	%BACKUP
+	%backup
 	ldx	#txtconf	; Imprimimos en el display una frase que pide una confirmacion
 	jsr	displ
 	jsr	waitkey		; Esperamos a que se presione una tecla
@@ -78,7 +78,7 @@ asksure	equ	*
 	bne	ret		; Si la tecla pulsada no fue RESET salimos sin carry
 	sec			; Si se quiere hacer reset, seteamos el carry en 1 
 
-ret	%RESTORE
+ret	%restup
 	rts
 
 
@@ -91,7 +91,7 @@ ret	%RESTORE
 **************************************************************************************************************
 displ	equ	*
 
-	%BACKUP	
+	%backup	
 	
 	pshx			; Copiamos el contenido de X a Y mediante el stack
 	puly
@@ -114,7 +114,7 @@ sigo	ldaa	#CICLOS		; Hacemos un delay de 1 segundo (2 ciclos de 0,5 segundos)
 	beq	listo
 	bra	sigo		; Si no es el terminador, analizo el siguiente
 
-listo	%RESTORE
+listo	%restup
 	rts
 
 *****************************************************************************************************************
@@ -130,7 +130,7 @@ listo	%RESTORE
 ******************************************************************************************************************
 print	equ	*
 
-	%BACKUP
+	%backup
 	
 	tsy			; creo un frame pointer
 	
@@ -150,7 +150,7 @@ incremx	inx			; Apunto X al siguiente caracter
 	bmi	finprnt		; Si ya no existen posiciones, salgo
 	bra	imprim		; repito con el siguente caracter
 
-finprnt	%RESTORE
+finprnt	%restup
 	
 	rts
 

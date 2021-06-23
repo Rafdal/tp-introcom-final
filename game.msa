@@ -121,7 +121,7 @@ ret_bq	pula
 ***************************************************************************************************************
 shipKey	equ	*
 
-	%BACKUP			; Hago backup de los registros
+	%backup			; Hago backup de los registros
 
 ************ TEST FOR RESET **********
 	cmpa	#RESET		; analizamos si la tecla preisonada fue RESET
@@ -135,8 +135,8 @@ not_rst	cmpa	#P1_KEY		; analizamos si la tecla presionada fue P1_KEY
 	clv
 	beq	ret_C0		; salimos
 
-*********** TEST FOR P2 KEY *********
-	cmpa	#P2		; analizamos si la tecla preisonada fue P2
+*********** TEST FOR P2_KEY *********
+	cmpa	#P2_KEY		; analizamos si la tecla preisonada fue P2
 	clv
 	beq	ret_C0		; si fue, salimos
 
@@ -159,7 +159,7 @@ ret_C0	clc			; pongo el carry en 0 indicando que no hubo reset
 
 ret	equ	*
 
-	%RESTORE		; Restauro los registros que guarde al comienzo
+	%restup		; Restauro los registros que guarde al comienzo
 
 	rts
 
@@ -177,7 +177,7 @@ ret	equ	*
 *	- Recibe por AccB el tipo de barco y lo coloca en la posicion
 **********************************************************************************************
 setShip	equ	*
-	%BACKUP
+	%backup
 	
 	ldaa	turno		; Evaluamos el turno del jugador
 	cmpa	#1		; y posicionamos X en el tablero del jugador actual
@@ -207,7 +207,7 @@ set_s	equ	*
 	pulb			; recupero el tipo de barco
 	stab	0,X		; y lo guardo en la posicion
 
-	%RESTORE
+	%restup
 	rts
 
 
@@ -233,7 +233,7 @@ set_s	equ	*
 *****************************************************************************************
 setCoor	equ	*
 	
-	%BACKUP			; Hago backup de todos los registros
+	%backup			; Hago backup de todos los registros
 	
 	cmpa	#$6		; Comparo con 6 (numero mas alto en la tabla de equivalencias)
 	bhi	numero		; para saber si es un Numero o una letra
@@ -286,7 +286,7 @@ prt_num	equ	*
 	
 ret_sc	equ	*
 	
-	%RESTORE		; Restauro los registros
+	%restup		; Restauro los registros
 
 	rts			; Salimos de la subrutina
 
@@ -297,17 +297,15 @@ ret_sc	equ	*
 
 
 **************************************************************************************************
-*
 *	Subrutina inRange: Comprueba que las coordenadas recibidas por AccA (coor1) y AccB (coor2)
 *		   esten dentro de la matriz de jugador.
 *		- Recibe por A la coordenada de la fila y por B la coordenada de la columna
 *		- Devuelve el bit de Carry en 1 si se encuentra por fuera del tablero
 *			o en 0 si se encuentra dentro de los limites
-*
 **************************************************************************************************
 inRange	equ	*
 
-	%BACKUP
+	%backup
 	
 	cmpa	#$A		; Comparamos la primera coordenada con la minima posible
 	bmi	afuera		; Si es menor, salimos indicando que no pertenece a la matriz
@@ -327,23 +325,21 @@ afuera	sec			; Seteamos el carry en 1 indicando que hubo error
 *	Zona donde las coordenadas recibidas son validas
 adentro	clc			; Seteamos el carry en 0 indicando que no hubo error
 
-endlim	%RESTORE
+endlim	%restup
 	rts
 
 
 
 ***************************************************************************************************************
-*
 *	testWin: Evalua si uno de los jugadores gano la partida, y en caso de ganar, procede a indicarlo en el 
 *		 display y en el bitmap.
 *		- Utiliza como parametros las variables definidas al final del programa, que evaluan la cantidad
 *			de barcos hundidos de cada jugador
 *		- Devuelve el bit de Carry en 1 si hubo ganador, y en 0 si no hubo ganador aun.
-*
 ***************************************************************************************************************
 testWin	equ	*
 
-	%BACKUP
+	%backup
 
 	ldaa	canhun1
 	cmpa	#CAN_BAR	; Comparo la cantidad de hundidos por los jugadores con #6 --> por ser el numero de barcos 
@@ -370,7 +366,7 @@ again	jsr	waitkey		; analizamos el teclado, esperando un RESET
 	cmpa	#RESET			
 	bne	again		; de ser reset, volvemos a empezar de 0.
 	
-finwin	%RESTORE
+finwin	%restup
 
 
 	rts
@@ -379,23 +375,20 @@ finwin	%RESTORE
 
 
 *************************************************************************************************************
-*
 *	setTurn: cambia el turno al jugador correspondiente
 *		- Recibe por AccA la tecla presionada
 *		- Modifica la posicion de memoria turno que contiene el turno actual.
-*
 **************************************************************************************************************
 setTurn	equ	*
 
-	%BACKUP
+	%backup
 
 	ldab	turno		; analizamos de quien es el turno que apreto la tecla
 	cmpb	#1
 	bne	jug2
-*_____________________
-*
+
 * Turno jugador 1
-*____________________
+
 jug1	ldab	shot_ID
 	cmpb	#1
 	beq	fire1		; analizamos si hubo un disparo previo errado
@@ -403,17 +396,16 @@ jug1	ldab	shot_ID
 	beq	tec1		; si es, se vuelve a elegir el jugador 1
 	bra	finturn		; si se apreto P2, salimos (no pasa nada)
 
-fire1	cmpa	#P2		; si hubo disparo y se apreto P2
+fire1	cmpa	#P2_KEY		; si hubo disparo y se apreto P2
 	beq	tec2		; cambiamos el turno al jugador 2
 	bra	finturn		; en caso contrario, salimos (no se repite el turno de P1)
-*____________________
-*
+
 * Turno jugador 2
-*____________________
+
 jug2	ldab	shot_ID
 	cmpb	#1
 	beq	fire2		; analizamos si hubo un disparo previo errado
-	cmpa	#P2		; analizo si la tecla apretada es P2
+	cmpa	#P2_KEY		; analizo si la tecla apretada es P2
 	beq	tec2		; si es, se vuelve a elegir el jugador 2
 	bra	finturn		; si se apreto P1_KEY, salimos (no pasa nada)
 
@@ -421,35 +413,32 @@ fire2	cmpa	#P1_KEY		; si hubo disparo y se apreto P1_KEY
 	beq	tec1		; cambiamos el turno al jugador 1
 	bra	finturn		; en caso contrario, salimos (no se repite el turno de P2)
 
-*_______________________
-*
+
 * Cambio a jugador 1
-*_______________________
+
 tec1	ldaa	#1
 	staa	turno		; Indico en una posicion de memoria que es el turno del jugador 1
 	ldx	#frase1		; mostramos la frase de jugador 1 en el display
 	jsr	displ
 	ldx	#play2		; cargamos en el bitmap el tablero del jugador 2
 	bra	change
-*_______________________
-*
+
 * Cambio a jugador 2
-*_______________________
+
 tec2	ldaa	#2
 	staa	turno		; Indico en una posicion de memoria que es el turno del jugador 2
 	ldx	#frase2		; mostramos la frase de jugador 2
 	jsr	displ
 	ldx	#play1		; cargamos en el bitmap el tablero del jugador 1
-*_______________________________________________________________________________
-*
+
 * Copiamos la matriz del jugador siguiente y borramos las coordenadas ingresadas
-*________________________________________________________________________________
+
 change	jsr	copiado
 	clr	coor1
 	clr	coor2
 	clr	shot_ID
 
-finturn	%RESTORE
+finturn	%restup
 	
 	rts
 

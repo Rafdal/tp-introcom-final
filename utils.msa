@@ -17,7 +17,7 @@ $const.def
 *******************************************************************************************************************
 reveal	equ	*
 	
-	%BACKUP
+	%backup
 	
 	ldy	#bitmap			; Cargo en Y la primer celda de la matriz destino
 	ldab	#36			; Defino un contador de la cantidad de valores a copiar
@@ -51,7 +51,7 @@ pass	inx				; Apunto a las siguientes celdas de origen y destino
 	decb				; Decremento el contador y compruebo si termine
 	bne	loop_rv
 
-	%RESTORE
+	%restup
 
 	rts
 
@@ -86,7 +86,7 @@ L02	equ	*			; Copio el contenido de la celda apuntada a la celda destino
 *******************************************************************************************************************
 copiado	equ	*
 	
-	%BACKUP
+	%backup
 	
 	ldy	#bitmap			; Cargo en Y la primer celda de la matriz destino
 	ldab	#36			; Defino un contador de la cantidad de valores a copiar
@@ -99,7 +99,7 @@ next01	ldaa	0,X			; Copio el contenido de la celda apuntada a la celda destino
 	decb				; Decremento el contador y compruebo si termine
 	bne	next01
 
-	%RESTORE
+	%restup
 
 	rts
 

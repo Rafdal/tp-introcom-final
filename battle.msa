@@ -136,7 +136,7 @@ L01	ldaa	0,y			; cargo el contenido del elemento de la matriz
 ***************************************************************************************************************
 evalKey	equ	*
 
-	%BACKUP			; Hago backup de los registros
+	%backup			; Hago backup de los registros
 
 ************ TEST FOR RESET **********
 	cmpa	#RESET		; analizamos si la tecla preisonada fue RESET
@@ -158,8 +158,8 @@ no_rst	cmpa	#P1_KEY		; analizamos si la tecla presionada fue P1_KEY
 	jsr	setTurn		; si lo fue, vamos al proceso de cambiar el turno
 	bra	ret_C0		; salimos
 
-*********** TEST FOR P2 KEY *********
-no_P1	cmpa	#P2		; analizamos si la tecla preisonada fue P2
+*********** TEST FOR P2_KEY *********
+no_P1	cmpa	#P2_KEY		; analizamos si la tecla preisonada fue P2
 	bne	no_P2
 	jsr	setTurn		; si lo fue, vamos al proceso de cambiar el turno
 	bra	ret_C0		; salimos
@@ -182,7 +182,7 @@ ret_C0	clc			; pongo el carry en 0 indicando que no hubo reset
 
 ret	equ	*
 
-	%RESTORE		; Restauro los registros que guarde al comienzo
+	%restup		; Restauro los registros que guarde al comienzo
 
 	rts	
 
@@ -207,7 +207,7 @@ ret	equ	*
 
 runFire	equ	*
 	
-	%BACKUP
+	%backup
 	
 	ldaa	turno		; Evaluamos que jugador tiene el turno de jugar
 	cmpa	#1		; y posicionamos X en el tablero del jugador contrario
@@ -334,7 +334,7 @@ end_fir	equ	*
 	pulx			; Recupero X (Guardado al principio) que contiene la posicion de la primera
 *	...			; celda de la matriz modificada.
 	jsr	copiado		; Al salir de la subrutina, copio el contenido del tablero modificado
-	%RESTORE		; al bitmap
+	%restup		; al bitmap
 
 	rts
 
@@ -356,7 +356,7 @@ end_fir	equ	*
 *****************************************************************************************
 
 h_acorz	equ	*
-	%BACKUP
+	%backup
 	ldab	turno			; Analizo si es el turno del jugador 1 o 2, y me posiciono sobre
 	cmpb	#1			; la primera celda del tablero contrario
 	beq	user1
@@ -381,7 +381,7 @@ noiceb	inx				; si todavia no hundi todas las partes, nos posicionamos sobre la 
 	bra	sigiceb			; y continamos
 
 exitice	equ	*
-	%RESTORE
+	%restup
 	rts
 
 *****************************************************************************************
@@ -402,7 +402,7 @@ exitice	equ	*
 
 seekdmg	equ	*
 
-	%BACKUP
+	%backup
 *****************************************************************************************
 *	Zona donde se analiza la celda de la derecha a la disparada			*
 *****************************************************************************************
@@ -418,7 +418,7 @@ der	pshx			; Guardamos la posicion de la celda disparada, ya que trabajaremos co
 	
 	inx			; Nos movemos uno a la derecha porque existe dicha posicion
 
-	%COMTOC			; Comparamos la celda actual con un carguero tocado, si coincide, cambiamos
+	%comdmg			; Comparamos la celda actual con un carguero tocado, si coincide, cambiamos
 *	...			; el color de la celda a rojo, indicamos que el carguero esta hundido y salimos
 
 *****************************************************************************************
@@ -435,7 +435,7 @@ izq	pulx			; Recuperamos en X la posicion de la celda disparada y lo volvemos a 
 	
 	dex			; Nos movemos a la posicion de la izquierda, ya que corroboramos que existe
 
-	%COMTOC			; Comparamos la celda actual con un carguero tocado, si coincide, cambiamos
+	%comdmg			; Comparamos la celda actual con un carguero tocado, si coincide, cambiamos
 *	...			; el color de la celda a rojo, indicamos que el carguero esta hundido y salimos
 
 *****************************************************************************************
@@ -455,7 +455,7 @@ arr	pulx			; Recuperamos en X la posicion de la celda disparada y lo volvemos a 
 	subd	#COL*EL_SIZE
 	xgdx
 	
-	%COMTOC			; Comparamos la celda actual con un carguero tocado, si coincide, cambiamos
+	%comdmg			; Comparamos la celda actual con un carguero tocado, si coincide, cambiamos
 *	...			; el color de la celda a rojo, indicamos que el carguero esta hundido y salimos	
 
 *****************************************************************************************
@@ -473,7 +473,7 @@ abaj	pulx			; Recuperamos en X la posicion de la celda disparada y lo volvemos a
 	ldab	#COL*EL_SIZE	; Como no hay error, bajamos una fila en la matriz
 	abx
 
-	%COMTOC			; Comparamos la celda actual con un carguero tocado, si coincide, cambiamos
+	%comdmg			; Comparamos la celda actual con un carguero tocado, si coincide, cambiamos
 *	...			; el color de la celda a rojo, indicamos que el carguero esta hundido y salimos	
 
 	pulx			; Recuperamos en X la posicion de la celda disparada
@@ -486,7 +486,7 @@ abaj	pulx			; Recuperamos en X la posicion de la celda disparada y lo volvemos a
 *	Zona donde se encontro una celda contigua tocada		*
 *************************************************************************
 
-chundid	equ	*		; Pintamos de rojo el bit que encontramos tocado, ya que el carguero se hunde
+sinkcar	equ	*		; Pintamos de rojo el bit que encontramos tocado, ya que el carguero se hunde
 	anda	#MASK
 	oraa	#ROJO
 	staa	0,x
@@ -503,7 +503,7 @@ finseek	pulx			; Recuperamos en X la posicion de la celda disparada
 *****************************************************************************************
 *	Fin de la subrutina seekdmg							*
 *****************************************************************************************
-endseek	%RESTORE
+endseek	%restup
 	rts
 
 

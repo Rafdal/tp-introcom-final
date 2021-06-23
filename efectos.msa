@@ -22,7 +22,7 @@ $macros.def
 ******************************************************************************************************************************************************
 espiral	equ	*
 	
-	%BACKUP			; hago backup de los registros
+	%backup			; hago backup de los registros
 	
 	ldaa	canhun1		; analizo quien fue el ganador
 	cmpa	#6			
@@ -30,11 +30,11 @@ espiral	equ	*
 
 gana1	equ	*		; Cargo la matriz ganadora en 
 	ldx	#matg1		; el Registro X
-	stx	matgan		; y su espacio de memoria reservado (matgan)
+	stx	winmat		; y su espacio de memoria reservado (winmat)
 	bra	ini_esp		
 gana2	equ	*
 	ldx	#matg2
-	stx	matgan
+	stx	winmat
 
 ini_esp	equ	*		; inicia el espiral
 	clr	contesp		; pongo en 0 el contador de la magnitud del desplazamiento
@@ -46,7 +46,7 @@ ini_esp	equ	*		; inicia el espiral
 	ldab	#3
 	decb
 	stab	col_esp
-	%POSIC			; posiciono X en las coordenadas provistas de la matriz ganadora
+	%setposm			; posiciono X en las coordenadas provistas de la matriz ganadora
 	jsr	pintar		; copio el contenido de la coordenada de la matriz gan. en el bitmap
 
 up	equ	*
@@ -54,7 +54,7 @@ up	equ	*
 	ldaa	contesp		; y lo cargo en 
 	staa	contmov		; el contador parcial
 sigueup	dec	fil_esp		; decremento la coordenada fila (desplazo hacia arriba en la matriz)
-	%POSIC			; posiciono X en las coordenadas provistas de la matriz ganadora
+	%setposm			; posiciono X en las coordenadas provistas de la matriz ganadora
 	jsr	pintar		; copio el contenido de la coordenada de la matriz gan. en el bitmap
 	dec	contmov		; decremento el contador parcial de movimientos
 	bne	sigueup		; si siguen quedando movimientos, repito el proceso
@@ -63,7 +63,7 @@ right	equ	*
 	ldaa	contesp		; cargo el contador de movimientos en esa direccion
 	staa	contmov		; en el contador parcial
 sigueri	inc	col_esp		; incremento la coordenada columna (desplazo hacia la derecha en la matriz)
-	%POSIC			; posiciono X en las coordenadas provistas de la matriz ganadora
+	%setposm			; posiciono X en las coordenadas provistas de la matriz ganadora
 	jsr	pintar		; copio el contenido de la coordenada de la matriz gan. en el bitmap
 	dec	contmov		; decremento el contador parcial de movimientos
 	bne	sigueri		; si siguen quedando movimientos, repito el proceso
@@ -73,7 +73,7 @@ down	equ	*
 	ldaa	contesp		; y lo cargo en 
 	staa	contmov		; el contador parcial
 siguedo	inc	fil_esp		; incremento la coordenada fila (desplazo hacia abajo en la matriz)
-	%POSIC			; posiciono X en las coordenadas provistas de la matriz ganadora
+	%setposm			; posiciono X en las coordenadas provistas de la matriz ganadora
 	jsr	pintar		; copio el contenido de la coordenada de la matriz gan. en el bitmap
 	bcs	finesp		; si hay carry, significa que terminamos el espiral
 	dec	contmov		; decrementamos el contador parcial de movimientos en esa direccion
@@ -83,14 +83,14 @@ left	equ	*
 	ldaa	contesp		; cargo el contador de movimientos en esa direccion
 	staa	contmov		; en el contador parcial
 siguele	dec	col_esp		; decremento la coordenada columna (desplazo hacia la izquierda en la matriz)
-	%POSIC			; posiciono X en las coordenadas provistas de la matriz ganadora
+	%setposm			; posiciono X en las coordenadas provistas de la matriz ganadora
 	jsr	pintar
 	dec	contmov
 	bne	siguele		; si siguen quedando movimientos, repito el proceso
 	jmp	up		; caso contrario, voy a up, para repetir el loop
 	
 finesp	equ	*	
-	%RESTORE		; restauro los registros
+	%restup		; restauro los registros
 	rts			; salgo de la subrutina
 
 *****************************************************************************************************************
@@ -100,7 +100,7 @@ finesp	equ	*
 *
 ******************************************************************************************************************
 pintar	equ	*
-	%BACKUP				; hago backup de los registros
+	%backup				; hago backup de los registros
 	ldaa	#CICLOS
 	jsr	delay			; hago un delay antes de pintar
 	ldy	#BITMAP			; cargo Y con la celda inicial del bitmap
@@ -118,7 +118,7 @@ pintar	equ	*
 	bra 	endpint			
 finpint	equ	*
 	clc				; sino, lo dejo en 0
-endpint	%RESTORE			; restauro los registros
+endpint	%restup			; restauro los registros
 	rts				; salgo de la subrutina
 
 
@@ -134,7 +134,7 @@ contesp	rmb	1		; Contador absoluto de cantidad de mov. para espiral
 contmov	rmb	1		; Contador parcial de cantidad de mov. para espiral
 col_esp	rmb	1		; Coordenadas para espiral. Columnas
 fil_esp	rmb	1		; Coordenadas para espiral. Filas
-matgan	rmb	2		; Direccion de inicio de matriz ganadora
+winmat	rmb	2		; Direccion de inicio de matriz ganadora
 
 
 
