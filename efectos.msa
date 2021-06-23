@@ -14,8 +14,8 @@ $macros.def
 *
 *****************************************************************************************************************************************************
 *
-*	Movimiento del espiral: El espiral funciona en sentido horario, comenzando su movimiento desde una posición central del bitmap, 
-*		moviéndose en un patrón repetitivo: arriba, derecha, abajo, izquierda.
+*	Movimiento del espiral: El espiral funciona en sentido horario, comenzando su movimiento desde una posicion central del bitmap, 
+*		moviendose en un patron repetitivo: arriba, derecha, abajo, izquierda.
 *		La magnitud del desplazamiento funciona de a pares: arriba/derecha y abajo/izquierda, que tienen la misma magnitud, incrementando 
 *		esta cantidad a medida que pasamos de una pareja a otra.
 *
@@ -24,7 +24,7 @@ espiral	equ	*
 	
 	%BACKUP			; hago backup de los registros
 	
-	ldaa	canhun1		; analizo quién fue el ganador
+	ldaa	canhun1		; analizo quien fue el ganador
 	cmpa	#6			
 	bne	gana2
 
@@ -40,7 +40,7 @@ ini_esp	equ	*		; inicia el espiral
 	clr	contesp		; pongo en 0 el contador de la magnitud del desplazamiento
 	clr	contmov		; y el contador parcial de movimientos
 
-	ldaa	#4		; cargo las coordenadas de la posición central (Fila 4(3),Columna 3(2))
+	ldaa	#4		; cargo las coordenadas de la posicion central (Fila 4(3),Columna 3(2))
 	deca			; desde donde inicia el espiral
 	staa	fil_esp		; en las posiciones designadas para coordenadas
 	ldab	#3
@@ -50,7 +50,7 @@ ini_esp	equ	*		; inicia el espiral
 	jsr	pintar		; copio el contenido de la coordenada de la matriz gan. en el bitmap
 
 up	equ	*
-	inc	contesp		; incremento el contador de movimientos que realizará en esa dirección
+	inc	contesp		; incremento el contador de movimientos que realizara en esa direccion
 	ldaa	contesp		; y lo cargo en 
 	staa	contmov		; el contador parcial
 sigueup	dec	fil_esp		; decremento la coordenada fila (desplazo hacia arriba en la matriz)
@@ -60,7 +60,7 @@ sigueup	dec	fil_esp		; decremento la coordenada fila (desplazo hacia arriba en l
 	bne	sigueup		; si siguen quedando movimientos, repito el proceso
 
 right	equ	*		
-	ldaa	contesp		; cargo el contador de movimientos en esa dirección
+	ldaa	contesp		; cargo el contador de movimientos en esa direccion
 	staa	contmov		; en el contador parcial
 sigueri	inc	col_esp		; incremento la coordenada columna (desplazo hacia la derecha en la matriz)
 	%POSIC			; posiciono X en las coordenadas provistas de la matriz ganadora
@@ -69,18 +69,18 @@ sigueri	inc	col_esp		; incremento la coordenada columna (desplazo hacia la derec
 	bne	sigueri		; si siguen quedando movimientos, repito el proceso
 	
 down	equ	*
-	inc	contesp		; incremento el contador de movimientos que realizará en esa dirección
+	inc	contesp		; incremento el contador de movimientos que realizara en esa direccion
 	ldaa	contesp		; y lo cargo en 
 	staa	contmov		; el contador parcial
 siguedo	inc	fil_esp		; incremento la coordenada fila (desplazo hacia abajo en la matriz)
 	%POSIC			; posiciono X en las coordenadas provistas de la matriz ganadora
 	jsr	pintar		; copio el contenido de la coordenada de la matriz gan. en el bitmap
 	bcs	finesp		; si hay carry, significa que terminamos el espiral
-	dec	contmov		; decrementamos el contador parcial de movimientos en esa dirección
+	dec	contmov		; decrementamos el contador parcial de movimientos en esa direccion
 	bne	siguedo		; si nos quedan movimientos, repetimos el proceso
 	
 left	equ	*
-	ldaa	contesp		; cargo el contador de movimientos en esa dirección
+	ldaa	contesp		; cargo el contador de movimientos en esa direccion
 	staa	contmov		; en el contador parcial
 siguele	dec	col_esp		; decremento la coordenada columna (desplazo hacia la izquierda en la matriz)
 	%POSIC			; posiciono X en las coordenadas provistas de la matriz ganadora
@@ -134,7 +134,7 @@ contesp	rmb	1		; Contador absoluto de cantidad de mov. para espiral
 contmov	rmb	1		; Contador parcial de cantidad de mov. para espiral
 col_esp	rmb	1		; Coordenadas para espiral. Columnas
 fil_esp	rmb	1		; Coordenadas para espiral. Filas
-matgan	rmb	2		; Dirección de inicio de matriz ganadora
+matgan	rmb	2		; Direccion de inicio de matriz ganadora
 
 
 

@@ -70,7 +70,7 @@ bitmap	rmb	COL*FIL*EL_SIZE		; Inicializo la matriz del bitmap
 *		si no se confirma, salimos sin carry.
 asksure	equ	*
 	%BACKUP
-	ldx	#txtconf	; Imprimimos en el display una frase que pide una confirmación
+	ldx	#txtconf	; Imprimimos en el display una frase que pide una confirmacion
 	jsr	displ
 	jsr	waitkey		; Esperamos a que se presione una tecla
 	cmpa	#RESET		
@@ -85,8 +85,8 @@ ret	%RESTORE
 
 **************************************************************************************************************
 *
-*	displ: imprime en el display una frase desplazándose de derecha a izquierda
-*		-Recibe por X la primera posición de memoria de la frase a imprimir
+*	displ: imprime en el display una frase desplazandose de derecha a izquierda
+*		-Recibe por X la primera posicion de memoria de la frase a imprimir
 *
 **************************************************************************************************************
 displ	equ	*
@@ -96,21 +96,21 @@ displ	equ	*
 	pshx			; Copiamos el contenido de X a Y mediante el stack
 	puly
 	xgdx			; Restamos 3 al contenido de X para apuntar 3 posiciones antes del primer caracter
-	subd	#3		; para que la subrutina print imprima 3 posiciones vacías al comienzo.
+	subd	#3		; para que la subrutina print imprima 3 posiciones vacias al comienzo.
 	xgdx
 
 sigo	ldaa	#CICLOS		; Hacemos un delay de 1 segundo (2 ciclos de 0,5 segundos)
 	jsr	delay
-	pshy			; paso al stack la posición a partir de la cual está permitido imprimir
-	jsr	print		; imprimo 4 caracteres en el display a partir de la "posición actual de la frase"
-	tsy			; Creo un frame pointer para poder comparar X con la primera posición de la frase
-*	...			; y así no imprimir las posiciones anteriores a la frase
+	pshy			; paso al stack la posicion a partir de la cual esta permitido imprimir
+	jsr	print		; imprimo 4 caracteres en el display a partir de la "posicion actual de la frase"
+	tsy			; Creo un frame pointer para poder comparar X con la primera posicion de la frase
+*	...			; y asi no imprimir las posiciones anteriores a la frase
 	inx			; Incremento X para apuntar al siguiente caracter
 	cpx	0,y		; Analizo si la posicion apuntada pertenece a la frase
 	puly			; Recupero Y del stack para "balancearlo" y no generar conflictos
 	bmi	sigo		; Si la posicion apuntada no pertenece a la frase, no imprimo ningun caracter
 	ldaa	0,x		; Si pertenece, comparamos el contenido con le terminador, si coincide, 
-	cmpa	#TERM		; no imprimimos ningún caracter en el display y salimos,
+	cmpa	#TERM		; no imprimimos ningun caracter en el display y salimos,
 	beq	listo
 	bra	sigo		; Si no es el terminador, analizo el siguiente
 
@@ -119,13 +119,13 @@ listo	%RESTORE
 
 *****************************************************************************************************************
 *
-*	print: Imprime en el display 4 carácteres de una frase en el orden que aparecen en memoria.
-*		Deja espacios en blanco si los primeros carácteres apuntado están fuera de la frase,
-*		y deja espacios vacíos luego de encontrar el terminador de la frase.
+*	print: Imprime en el display 4 caracteres de una frase en el orden que aparecen en memoria.
+*		Deja espacios en blanco si los primeros caracteres apuntado estan fuera de la frase,
+*		y deja espacios vacios luego de encontrar el terminador de la frase.
 *
-*		-Recibe por Stack la posición del primer carácter de la frase original, a partir de la cuál está
-*			permitido imprimir caráteres
-*		-Recibe por X la posición del primer carácter apuntado (puede estar antes de la frase original)
+*		-Recibe por Stack la posicion del primer caracter de la frase original, a partir de la cual esta
+*			permitido imprimir carateres
+*		-Recibe por X la posicion del primer caracter apuntado (puede estar antes de la frase original)
 *
 ******************************************************************************************************************
 print	equ	*
@@ -134,10 +134,10 @@ print	equ	*
 	
 	tsy			; creo un frame pointer
 	
-	jsr	clrdis		; vacío el display
-	ldab	#INIDIS		; Cargo en B la posición de más a la izquierda del display
+	jsr	clrdis		; vacio el display
+	ldab	#INIDIS		; Cargo en B la posicion de mas a la izquierda del display
 
-imprim	cpx	8,Y		; Comparo X con la posición del primer caracter de la frase
+imprim	cpx	8,Y		; Comparo X con la posicion del primer caracter de la frase
 	bmi	incremx		; si es menor, quiere decir que hay que dejar el espacio en blanco: salteo
 	
 	ldaa	0,x		; Cargo en AccA el caracter que quiero imprimir
@@ -146,7 +146,7 @@ imprim	cpx	8,Y		; Comparo X con la posición del primer caracter de la frase
 	jsr	outchar		; Si no es el terminador, imprimo el caracter
 
 incremx	inx			; Apunto X al siguiente caracter
-	decb			; Apunto hacia la siguiente posición del display.
+	decb			; Apunto hacia la siguiente posicion del display.
 	bmi	finprnt		; Si ya no existen posiciones, salgo
 	bra	imprim		; repito con el siguente caracter
 

@@ -13,7 +13,7 @@ $const.def
 
 *******************************************************************************************************************
 * 	Subrutina Reveal: Muestra la ubicacion de los barcos en el Bitmap
-*		- Recibe por X la posición de incio del tablero a mostrar
+*		- Recibe por X la posicion de incio del tablero a mostrar
 *******************************************************************************************************************
 reveal	equ	*
 	
@@ -48,7 +48,7 @@ case03	cmpa	#ACZ
 
 pass	inx				; Apunto a las siguientes celdas de origen y destino
 	iny				
-	decb				; Decremento el contador y compruebo si terminé
+	decb				; Decremento el contador y compruebo si termine
 	bne	loop_rv
 
 	%RESTORE
@@ -58,7 +58,7 @@ pass	inx				; Apunto a las siguientes celdas de origen y destino
 
 *******************************************************************************************************************
 * 	Subrutina CLEAR TAB: Borra todos los barcos de un tablero
-*		- Recibe por X la posición de incio del tablero a borrar
+*		- Recibe por X la posicion de incio del tablero a borrar
 *******************************************************************************************************************
 clr_tab	equ	*
 	psha
@@ -71,7 +71,7 @@ L02	equ	*			; Copio el contenido de la celda apuntada a la celda destino
 	staa	0,X			; correspondiente.
 	
 	inx				; Apunto a las siguientes celdas de origen y destino
-	decb				; Decremento el contador y compruebo si terminé
+	decb				; Decremento el contador y compruebo si termine
 	bne	L02
 
 	pulx
@@ -82,7 +82,7 @@ L02	equ	*			; Copio el contenido de la celda apuntada a la celda destino
 
 *******************************************************************************************************************
 * 	Subrutina copiado: Copia el contenido de una matriz al Bitmap
-*		- Recibe por X la posición de incio del tablero por copiar
+*		- Recibe por X la posicion de incio del tablero por copiar
 *******************************************************************************************************************
 copiado	equ	*
 	
@@ -96,7 +96,7 @@ next01	ldaa	0,X			; Copio el contenido de la celda apuntada a la celda destino
 	
 	inx				; Apunto a las siguientes celdas de origen y destino
 	iny				
-	decb				; Decremento el contador y compruebo si terminé
+	decb				; Decremento el contador y compruebo si termine
 	bne	next01
 
 	%RESTORE
@@ -110,8 +110,8 @@ next01	ldaa	0,X			; Copio el contenido de la celda apuntada a la celda destino
 *							*
 * Esta subrutina genera un delay de aprox 0.5 - 1s para	*
 * simluador del wookie					*
-* No recibe ningún parámetro ni retorna valores, no 	*
-* hace falta liberar el stack depués de invocarla	*
+* No recibe ningun parametro ni retorna valores, no 	*
+* hace falta liberar el stack depues de invocarla	*
 *********************************************************
 
 delay	equ	*
@@ -119,11 +119,11 @@ delay	equ	*
 	pshy							(5 ciclos)
 	psha							(3 ciclos)
 	pshb							(3 ciclos)
-	ldaa	#6		Cargo la cantidad de repeticiones que haré con el loop1. (23 ciclos)
+	ldaa	#8		Cargo la cantidad de repeticiones que hare con el loop1. (23 ciclos)
 *								[TOTAL:17]
 
 *	[LOOP1]: n recorridos del loop1 lleva n*(9+T) ciclos, siendo T los ciclos en total del loop2. 
-loop1	ldy	#$D900		Cargo la cantidad de repeticiones que haré con el loop2. (4 ciclos)
+loop1	ldy	#$D900		Cargo la cantidad de repeticiones que hare con el loop2. (4 ciclos)
 
 * 	[LOOP2]: Un solo recorrido del loop2 lleva 9 ciclos, 55552 ($D900) recorridos del loop2 lleva 499968 ciclos
 loop2	nop			retardo 		(2 ciclos)

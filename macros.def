@@ -4,7 +4,7 @@
 
 **********************************************************************
 *
-*	Zona de definición de macros
+*	Zona de definicion de macros
 *
 **********************************************************************
 	MACRO	%BACKUP			; Hace backup de los todos los registros 
@@ -22,17 +22,17 @@
 	ENDMAC
 	
 	MACRO	%COMTOC			; Compara el valor de una celda con un "carguero tocado"
-	ldaa	0,x			; y según el resultado, decide si hundir el barco analizado o no
+	ldaa	0,x			; y segun el resultado, decide si hundir el barco analizado o no
 	cmpa	#CTOCADO	
 	beq	chundid
 	ENDMAC
 
 	MACRO	%POSIC
-	ldx	matgan			; cargo x con la posición inicial de la mat. ganadora
+	ldx	matgan			; cargo x con la posicion inicial de la mat. ganadora
 	ldaa	fil_esp			; cargo AccA con la coordenada fila, dada en fil_esp
 	ldab	#COL*EL_SIZE
 	mul				
 	abx				; posiciono x en la celda inicial de la fila dada
 	ldab	col_esp			; cargo AccB con la coordenada columna, dada en col_esp
-	abx				; Posiciono X en la posición de la matriz con esas coordenadas.
+	abx				; Posiciono X en la posicion de la matriz con esas coordenadas.
 	ENDMAC

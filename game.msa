@@ -113,10 +113,10 @@ ret_bq	pula
 
 **************************************************************************************************************
 * 
-*	shipKey: evalúa qué tecla se apretó y a qué hacer según la tecla presionada.
-*		- Recibe por A el valor numérico de la tecla presionada en el teclado, y utiliza
+*	shipKey: evalua que tecla se apreto y a que hacer segun la tecla presionada.
+*		- Recibe por A el valor numerico de la tecla presionada en el teclado, y utiliza
 *			las equivalencias definidas como constantes al principio para poder indentificar la tecla.
-*		- Devuelve el carry en 1 si se confirmó el RESET, o en 0 si no hubo RESET.
+*		- Devuelve el carry en 1 si se confirmo el RESET, o en 0 si no hubo RESET.
 * 
 ***************************************************************************************************************
 shipKey	equ	*
@@ -159,7 +159,7 @@ ret_C0	clc			; pongo el carry en 0 indicando que no hubo reset
 
 ret	equ	*
 
-	%RESTORE		; Restauro los registros que guardé al comienzo
+	%RESTORE		; Restauro los registros que guarde al comienzo
 
 	rts
 
@@ -173,7 +173,7 @@ ret	equ	*
 *	Subrutina setShip: Se la llama cuando un jugador presiona FIREKEY! para colocar un barco
 *			en las coordenadas ingresadas
 *		Modifica una celda de la matriz del jugador actual
-*	- Recibe por coor1 y coor2 (variables) las coordenadas a las que se apuntó
+*	- Recibe por coor1 y coor2 (variables) las coordenadas a las que se apunto
 *	- Recibe por AccB el tipo de barco y lo coloca en la posicion
 **********************************************************************************************
 setShip	equ	*
@@ -194,13 +194,13 @@ set_s	equ	*
 	pshb			; guardo en stack el tipo de barco
 
 	ldaa	coor1
-	ldab	#$A		; Hago que la coordenada 1 pase a ser un número de 0 a 5
+	ldab	#$A		; Hago que la coordenada 1 pase a ser un numero de 0 a 5
 	sba			; restandole la menor coordenada posible
 	ldab	#COL*EL_SIZE	
 	mul	
 	abx			; Me posiciono en la fila correspondiente a la coordenada 1
 	ldab	coor2
-	decb			; Hacemos que AccB contenga al número de columna ingresado
+	decb			; Hacemos que AccB contenga al numero de columna ingresado
 	abx			; "Desplazamos" a X sobre las columnas para llegar a la celda solicitada
 *	...			; En este punto X apunta a la celda disparada
 
@@ -228,29 +228,29 @@ set_s	equ	*
 *											*
 * Notas:										*
 *	Asigna a la tecla presionada un nuevo valor y la guarda 			*
-*	en la posición de memoria correspondiente					*
+*	en la posicion de memoria correspondiente					*
 * 	Muestra las coordenadas presionadas en el display				*
 *****************************************************************************************
 setCoor	equ	*
 	
 	%BACKUP			; Hago backup de todos los registros
 	
-	cmpa	#$6		; Comparo con 6 (número más alto en la tabla de equivalencias)
-	bhi	numero		; para saber si es un Número o una letra
+	cmpa	#$6		; Comparo con 6 (numero mas alto en la tabla de equivalencias)
+	bhi	numero		; para saber si es un Numero o una letra
 
 	ldab	coor1		; Si la coordenada ingresada ya tiene algo, salgo para no sobreescribirla
 * bne	ret_sc
 
-	cmpa	#$2		; Como las asignaciones de teclas no son consecutivas, debemos evaluar a qué 
+	cmpa	#$2		; Como las asignaciones de teclas no son consecutivas, debemos evaluar a que 
 	bhi	L04		; segmento pertenece.
 
 ******** SEGMENT 1 **********
-	ldab	#$A		; convertimos la tecla apretada en el número de fila
-	aba			; Realizo una operación con el valor correspondiente al segmento al que pertenece
+	ldab	#$A		; convertimos la tecla apretada en el numero de fila
+	aba			; Realizo una operacion con el valor correspondiente al segmento al que pertenece
 	staa	coor1		; Como es una letra, la guardamos en la coordenada 1
 	bra	prt_let		; Luego de guardar la coordenada, salgo
 
-L04	ldab	#$9		; convertimos la tecla apretada en el número de fila
+L04	ldab	#$9		; convertimos la tecla apretada en el numero de fila
 	aba			
 	staa	coor1		; la guardamos en la coordenada 1
 
@@ -261,28 +261,28 @@ prt_let	equ	*
 	jsr	outchar
 	bra	ret_sc		; salimos
 
-******** NÚMERO (COLUMNA) **********
+******** NuMERO (COLUMNA) **********
 
 numero	ldab	coor2		; Si la coordenada ingresada ya tiene algo, salgo para no sobreescribirla
 * bne	ret_sc
 	
-	cmpa	#$A		; Como las asignaciones de teclas no son consecutivas, debemos evaluar a qué
+	cmpa	#$A		; Como las asignaciones de teclas no son consecutivas, debemos evaluar a que
 	bhi	L06		; segmento pertenece.
 
-L05	ldab	#7		; convertimos el valor del teclado al valor numérico de la columna
+L05	ldab	#7		; convertimos el valor del teclado al valor numerico de la columna
 	sba
 	staa	coor2		; lo guardamos en la coordenada 2
 	bra	prt_num
 	
-L06	ldab	#8		; convertimos el valor del teclado al valor numérico de la columna
+L06	ldab	#8		; convertimos el valor del teclado al valor numerico de la columna
 	sba	
 	staa	coor2		; lo guardamos en la coordenada 2
 
 prt_num	equ	*
-	ldab	#$30		; convertimos el número a su carácter ASCII
+	ldab	#$30		; convertimos el numero a su caracter ASCII
 	aba
 	clrb
-	jsr	outchar		; lo imprimimos en la posición de más a la derecha del display
+	jsr	outchar		; lo imprimimos en la posicion de mas a la derecha del display
 	
 ret_sc	equ	*
 	
@@ -299,32 +299,32 @@ ret_sc	equ	*
 **************************************************************************************************
 *
 *	Subrutina inRange: Comprueba que las coordenadas recibidas por AccA (coor1) y AccB (coor2)
-*		   estén dentro de la matriz de jugador.
+*		   esten dentro de la matriz de jugador.
 *		- Recibe por A la coordenada de la fila y por B la coordenada de la columna
-*		- Devuelve el bit de Carry en 1 si se encuentrá por fuera del tablero
-*			o en 0 si se encuentra dentro de los límites
+*		- Devuelve el bit de Carry en 1 si se encuentra por fuera del tablero
+*			o en 0 si se encuentra dentro de los limites
 *
 **************************************************************************************************
 inRange	equ	*
 
 	%BACKUP
 	
-	cmpa	#$A		; Comparamos la primera coordenada con la mínima posible
+	cmpa	#$A		; Comparamos la primera coordenada con la minima posible
 	bmi	afuera		; Si es menor, salimos indicando que no pertenece a la matriz
 	cmpa	#$F		; Comparamos la primera coordenada con la mayor posible
 	bhi	afuera		; Si es mayor, salimos indicando que no pertenece a la matriz
-	cmpb	#1		; Comparamos la segunda coordenada con la mínima posible
+	cmpb	#1		; Comparamos la segunda coordenada con la minima posible
 	bmi	afuera		; Si es menor, salimos indicando que no pertenece a la matriz
-	cmpb	#6		; Comparamos la segunda coordenada con la máxima posible
+	cmpb	#6		; Comparamos la segunda coordenada con la maxima posible
 	bhi	afuera		; Si es mayor, salimos indicando que no pertenece a la matriz
-	bra	adentro		; Si no se cumplió ninguna de las condiciones anteriores, las coordenadas
+	bra	adentro		; Si no se cumplio ninguna de las condiciones anteriores, las coordenadas
 *	...			; son correctas
 
-*	Zona donde las coordenadas recibidas no son válidas
+*	Zona donde las coordenadas recibidas no son validas
 afuera	sec			; Seteamos el carry en 1 indicando que hubo error
 	bra	endlim		; Salimos de la subrutina
 
-*	Zona donde las coordenadas recibidas son válidas
+*	Zona donde las coordenadas recibidas son validas
 adentro	clc			; Seteamos el carry en 0 indicando que no hubo error
 
 endlim	%RESTORE
@@ -334,11 +334,11 @@ endlim	%RESTORE
 
 ***************************************************************************************************************
 *
-*	testWin: Evalúa si uno de los jugadores ganó la partida, y en caso de ganar, procede a indicarlo en el 
+*	testWin: Evalua si uno de los jugadores gano la partida, y en caso de ganar, procede a indicarlo en el 
 *		 display y en el bitmap.
-*		- Utiliza como parámetros las variables definidas al final del programa, que evalúan la cantidad
+*		- Utiliza como parametros las variables definidas al final del programa, que evaluan la cantidad
 *			de barcos hundidos de cada jugador
-*		- Devuelve el bit de Carry en 1 si hubo ganador, y en 0 si no hubo ganador aún.
+*		- Devuelve el bit de Carry en 1 si hubo ganador, y en 0 si no hubo ganador aun.
 *
 ***************************************************************************************************************
 testWin	equ	*
@@ -346,25 +346,25 @@ testWin	equ	*
 	%BACKUP
 
 	ldaa	canhun1
-	cmpa	#CAN_BAR	; Comparo la cantidad de hundidos por los jugadores con #6 --> por ser el número de barcos 
+	cmpa	#CAN_BAR	; Comparo la cantidad de hundidos por los jugadores con #6 --> por ser el numero de barcos 
 	beq	win1		; con los que se juega
 	ldaa	canhun2		; Si la cantidad de hundidos por el jugador 1 es 6, imprimimos la frase de felicitaciones al jugador 1
 	cmpa	#CAN_BAR	; Si la cantidad de hundidos por el jugador 2 es 6,
 	beq	win2		; Imprimimos la frase de felicitaciones al jugador 2
-	clc			; ponemos el carry en 0 si ningún jugador ganó.
-	bra	finwin		; Si ninguno de los jugadores alcanzó la cantidad de hundidos necesarios, salimos
+	clc			; ponemos el carry en 0 si ningun jugador gano.
+	bra	finwin		; Si ninguno de los jugadores alcanzo la cantidad de hundidos necesarios, salimos
 
 win1	equ	*
-	ldx	#winner1	; Cargamos en X la posición del primer caracter de la frase para el jugador 1
+	ldx	#winner1	; Cargamos en X la posicion del primer caracter de la frase para el jugador 1
 	jsr	displ		; Imprimimos la frase y salimos
 	bra	fingana
 	
 win2	equ	*	
-	ldx	#winner2	; Cargamos en X la posición del primer caracter de la frase para el jugador 2
+	ldx	#winner2	; Cargamos en X la posicion del primer caracter de la frase para el jugador 2
 	jsr	displ		; Imprimimos la frase y salimos
 
-fingana	jsr	espiral		; Imprimimos un efecto de espiral en el bitmap mostrando el jugador que ganó la partida
-	sec			; ponemos el carry en 1 indicando que un jugador ya ganó y salimos
+fingana	jsr	espiral		; Imprimimos un efecto de espiral en el bitmap mostrando el jugador que gano la partida
+	sec			; ponemos el carry en 1 indicando que un jugador ya gano y salimos
 
 again	jsr	waitkey		; analizamos el teclado, esperando un RESET
 	cmpa	#RESET			
@@ -382,14 +382,14 @@ finwin	%RESTORE
 *
 *	setTurn: cambia el turno al jugador correspondiente
 *		- Recibe por AccA la tecla presionada
-*		- Modifica la posición de memoria turno que contiene el turno actual.
+*		- Modifica la posicion de memoria turno que contiene el turno actual.
 *
 **************************************************************************************************************
 setTurn	equ	*
 
 	%BACKUP
 
-	ldab	turno		; analizamos de quién es el turno que apretó la tecla
+	ldab	turno		; analizamos de quien es el turno que apreto la tecla
 	cmpb	#1
 	bne	jug2
 *_____________________
@@ -401,9 +401,9 @@ jug1	ldab	shot_ID
 	beq	fire1		; analizamos si hubo un disparo previo errado
 	cmpa	#P1_KEY		; analizo si la tecla apretada es P1_KEY
 	beq	tec1		; si es, se vuelve a elegir el jugador 1
-	bra	finturn		; si se apretó P2, salimos (no pasa nada)
+	bra	finturn		; si se apreto P2, salimos (no pasa nada)
 
-fire1	cmpa	#P2		; si hubo disparo y se apretó P2
+fire1	cmpa	#P2		; si hubo disparo y se apreto P2
 	beq	tec2		; cambiamos el turno al jugador 2
 	bra	finturn		; en caso contrario, salimos (no se repite el turno de P1)
 *____________________
@@ -415,9 +415,9 @@ jug2	ldab	shot_ID
 	beq	fire2		; analizamos si hubo un disparo previo errado
 	cmpa	#P2		; analizo si la tecla apretada es P2
 	beq	tec2		; si es, se vuelve a elegir el jugador 2
-	bra	finturn		; si se apretó P1_KEY, salimos (no pasa nada)
+	bra	finturn		; si se apreto P1_KEY, salimos (no pasa nada)
 
-fire2	cmpa	#P1_KEY		; si hubo disparo y se apretó P1_KEY
+fire2	cmpa	#P1_KEY		; si hubo disparo y se apreto P1_KEY
 	beq	tec1		; cambiamos el turno al jugador 1
 	bra	finturn		; en caso contrario, salimos (no se repite el turno de P2)
 
@@ -426,7 +426,7 @@ fire2	cmpa	#P1_KEY		; si hubo disparo y se apretó P1_KEY
 * Cambio a jugador 1
 *_______________________
 tec1	ldaa	#1
-	staa	turno		; Indico en una posición de memoria que es el turno del jugador 1
+	staa	turno		; Indico en una posicion de memoria que es el turno del jugador 1
 	ldx	#frase1		; mostramos la frase de jugador 1 en el display
 	jsr	displ
 	ldx	#play2		; cargamos en el bitmap el tablero del jugador 2
@@ -436,7 +436,7 @@ tec1	ldaa	#1
 * Cambio a jugador 2
 *_______________________
 tec2	ldaa	#2
-	staa	turno		; Indico en una posición de memoria que es el turno del jugador 2
+	staa	turno		; Indico en una posicion de memoria que es el turno del jugador 2
 	ldx	#frase2		; mostramos la frase de jugador 2
 	jsr	displ
 	ldx	#play1		; cargamos en el bitmap el tablero del jugador 1
@@ -460,7 +460,7 @@ finturn	%RESTORE
 car_txt	fcc	'COLOQUE CARGUERO'
 	fcb	0
 
-sub_txt	fcc	'COLOQUE SUBMARINO'
+sub_txt	fcc	'COLOQUE SUBMARINOS'
 	fcb	0
 
 acz_txt	fcc	'COLOQUE ACORAZADO'
