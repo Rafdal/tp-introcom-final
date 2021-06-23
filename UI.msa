@@ -6,7 +6,7 @@
 
         p68h11
 
-	public	initdis,waitkey,outchar,println,clrdis,bitmap,displ,print,asksure
+	public	initdis,waitkey,outchar,clrdis,bitmap,displ,print,asksure
 
 	extern	delay,txtconf
 
@@ -41,7 +41,7 @@ MASKOUT	equ	11110000b
 
 
 
-$str_hand.def			string handlers
+* $str_hand.def			string handlers
 $macros.def
 
 *-###################################################################
@@ -118,15 +118,13 @@ listo	%restup
 	rts
 
 *****************************************************************************************************************
-*
 *	print: Imprime en el display 4 caracteres de una frase en el orden que aparecen en memoria.
 *		Deja espacios en blanco si los primeros caracteres apuntado estan fuera de la frase,
 *		y deja espacios vacios luego de encontrar el terminador de la frase.
-*
+
 *		-Recibe por Stack la posicion del primer caracter de la frase original, a partir de la cual esta
 *			permitido imprimir carateres
 *		-Recibe por X la posicion del primer caracter apuntado (puede estar antes de la frase original)
-*
 ******************************************************************************************************************
 print	equ	*
 
@@ -153,11 +151,6 @@ incremx	inx			; Apunto X al siguiente caracter
 finprnt	%restup
 	
 	rts
-
-
-
-
-
 
 
 
@@ -269,52 +262,6 @@ sinnum	sec			; si no hay numero, seteo el carry
 
 fincon	pula
 
-	rts
-
-
-
-
-
-*************************************************************************
-*		# TESTED WORKING STABLE #	Sat 05  18:26		*
-*************************************************************************
-*		println	(PRINT LINE)					*
-* Descripcion:								*
-*	Imprime 4 caracteres en el display en una sola			*
-* subrutina, utilizando un arreglo de 4 bytes (caracteres) en memoria	*
-* como input para el display						*
-*									*
-* Params:								*
-* 	- [AccY]: Pos. de memoria de la cadena que			*
-*		desea imprimir						*
-* 									*
-* Nota: no devuelve valores, deja el AccY como estaba			*
-*	antes de ejecutar la subrutina					*
-*************************************************************************
-* [XH] 0 <- (X)
-* [XL] 1
-* [PCH] 2
-* [PCL] 3
-
-println	equ	*
-	pshy		backup Y
-	psha		backup A
-	pshb		backup B
-
-	ldab	#4	;inicio B en 4
-repite	equ	*
-	decb
-	ldaa	0,y	;leo el caracter en cuestion
-	stab	PORTCL	;set the position 0-3
-	staa	PORTB	;set the character
-	iny
-
-	tstb
-	bne	repite
-
-	pulb		recupero backup B
-	pula		recupero backup A
-	puly		recupero backup Y
 	rts
 
 
