@@ -2,7 +2,7 @@
 	
 	extern	initdis,outchar,delay,bitmap,testWin,setTurn,waitkey,asksure,setCoor
 	extern	clrdis,displ,print
-	extern	espiral,pintar,copiado,reveal,modTest
+	extern	espiral,pintar,copiado,reveal,ld_Tabs
 
 	extern	inRange
 
@@ -47,6 +47,11 @@ loop	equ	*
 setup	equ	*
 	jsr	initdis			; inicializamos el teclado y display
 
+	ldx	#gametxt
+	jsr	displ
+	jsr	delay
+	jsr	delay
+
 	clr	coor1
 	clr	coor2
 	clr	shot_ID
@@ -56,7 +61,8 @@ setup	equ	*
 	clr	canhun2		; vaciamos la memoria
 	jsr	clrdis		; vaciamos el display
 	
-	jsr	modTest			; module testing
+	jsr	ld_Tabs			; cargar los barcos en cada tablero
+	bcs	setup			; si se presiono reset, reiniciamos
 
 	ldy	#play1			; cargo en el registro y el tablero de player 1
 	ldab	#COL*FIL*EL_SIZE	; inicio un contador del tamaño de la matriz
@@ -464,7 +470,6 @@ endarou	%RESTORE
 
 
 
-*==========================================================================================================================
 
 	rseg	VARS
 **************************************************
@@ -472,10 +477,7 @@ endarou	%RESTORE
 *	ZONA DE VARIABLES
 *
 **************************************************
-*______________________________________________
-*
-*	Variables del juego
-*_____________________________________________
+*******	Variables del juego *******************
 coor1	rmb	1		; almacena el número de fila ingresado por el usuario
 coor2	rmb	1		; almacena el número de columna ingresado por el usuario
 turno	rmb	1		; almacena de quién es el turno actual
@@ -486,90 +488,28 @@ acorz1	rmb	1		; Contador de veces que el jugador 1 toca un ACORZD
 acorz2	rmb	1		; Contador de veces que el jugador 2 toca un ACORZD
 
 
-*********************************************************************************************
-*
-*	Zona de stack
-*
-*********************************************************************************************
+*********************************
+*	Zona de stack		*
+*********************************
 stack	rmb	100
 stk_ini	equ	*-1
 
 ************************************************************
-*
 *	Inicialización de las matrices de los dos jugadores
-*
 ************************************************************
 play1	rmb	COL*FIL*EL_SIZE		; Inicializo tablero del jugador 1
 play2	rmb	COL*FIL*EL_SIZE		; Inicializo tablero del jugador 2
-*_______________________________________________
-*
+
+
 * Frase de ganador
-*______________________________________________
 
 winner1	fcc	'GANADOR PLAYER 1'
 	fcb	0
 winner2	fcc	'GANADOR PLAYER 2'
 	fcb	0
 
-
-*******************************************************************
-*
-*	TABLERO PLAYER 1: 
-*		
-*******************************************************************
-	ORG	play1
-
-*		 1   2   3   4   5   6
-
-* fcb	___,SUB,___,CAR,___,___		; A
-
-* fcb	___,___,___,CAR,___,___		; B
-
-* fcb	___,___,___,___,___,SUB		; C
-
-* fcb	___,ACZ,ACZ,ACZ,___,___		; D
-
-* fcb	SUB,___,___,___,___,___		; E
-
-* fcb	___,___,CAR,CAR,___,___		; F
-
-
-* fcb	___,___,___,___,___,___		; A
-
-* fcb	___,___,___,___,___,___		; B
-
-* fcb	___,___,___,___,___,___		; C
-
-* fcb	___,___,___,___,___,___		; D
-
-* fcb	___,___,___,___,___,___		; E
-
-* fcb	___,___,___,___,___,___		; F
-
-
-*******************************************************************
-*
-*	TABLERO PLAYER 2:
-*	
-*******************************************************************
-	ORG	play2
-
-*		 1   2   3   4   5   6
-
-* fcb	___,___,___,___,SUB,___		; A
-
-* fcb	ACZ,___,___,___,___,___		; B
-
-* fcb	ACZ,___,___,SUB,___,CAR		; C
-
-* fcb	ACZ,___,___,___,___,CAR		; D
-
-* fcb	___,___,___,___,___,___		; E
-
-* fcb	CAR,CAR,___,___,___,SUB		; F
-
-
-
-*===================================================================================================================
+* Frase de inicio del juego
+gametxt	fcc	'BATALLA NAVAL'
+	fcb	0
 
 	END

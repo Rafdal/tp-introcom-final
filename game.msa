@@ -8,7 +8,7 @@
 	extern	espiral,winner1,winner2
 	extern	canhun1,canhun2
 
-	public	setTurn,setCoor,testWin,inRange,modTest
+	public	setTurn,setCoor,testWin,inRange,ld_Tabs
 
 $const.def
 $macros.def
@@ -24,19 +24,22 @@ $macros.def
 
 	rseg	CODE
 
-modTest	equ	*
+ld_Tabs	equ	*
 
+	%displ	frase1
 	ldaa	#1
 	ldx	#play1
 	jsr	ldFleet		Cargamos la flota del player 1
+	bcs	retLDT
 
+	%displ	frase2
 	ldaa	#2
 	ldx	#play2
-	jsr	ldFleet		Cargamos la flota del player 1
+	jsr	ldFleet		Cargamos la flota del player 2
+	bcs	retLDT
 
-	jsr	waitkey		Esperamos la aprobacion del publico
-
-ret_C1	rts
+	%displ	gamebeg		mensaje de inicio de juego
+retLDT	rts
 
 
 
@@ -54,23 +57,30 @@ ldFleet	equ	*
 	ldaa	#3
 	ldab	#ACZ
 	jsr	ld_ship
+	bcs	retFlt
 
 	%displ	car_txt
 	ldaa	#2
 	ldab	#CAR
 	jsr	ld_ship
+	bcs	retFlt
 
 	%displ	car_txt
 	ldaa	#2
 	ldab	#CAR
 	jsr	ld_ship
+	bcs	retFlt
 
 	%displ	sub_txt
 	ldaa	#3
 	ldab	#SUB
 	jsr	ld_ship
+	bcs	retFlt
+
 	jsr	delay		delay para que se vea el barco agregado
-	rts
+retFlt	rts
+
+
 
 ******************************
 *	LOAD SHIP
@@ -79,8 +89,8 @@ ldFleet	equ	*
 ld_ship	equ	*
 	jsr	clrdis
 	jsr	ld_bloc		Cargo el bloque de barco
-	jsr	reveal		mostramos las ubicaciones de los barcos
 	bcs	ret_ls		salgo con C=1 para resetear
+	jsr	reveal		mostramos las ubicaciones de los barcos
 	deca
 	bne	ld_ship
 ret_ls	rts
@@ -93,13 +103,12 @@ ld_bloc	equ	*
 	psha
 wait	jsr	waitkey		espero a que se presione una tecla
 	jsr	shipKey		analizo la tecla presionada
+	bcs	ret_bq
 	bvc	wait		si V=0, entonces aun no se presiono Fire
 	clr	coor1
 	clr	coor2
-	pula
+ret_bq	pula
 	rts
-
-
 
 
 **************************************************************************************************************
@@ -134,6 +143,10 @@ not_rst	cmpa	#P1_KEY		; analizamos si la tecla presionada fue P1_KEY
 *********** TEST FOR FIRE KEY *********
 	cmpa	#FIREKEY	; analizamos si la tecla preisonada fue FIREKEY
 	bne	no_fire
+	ldaa	coor1
+	beq	ret_C0
+	ldaa	coor2
+	beq	ret_C0
 	jsr	setShip		; recibe por AccB el tipo de barco y lo coloca en la posicion
 	sev			; a la que apuntan las coordenadas. Coloco V=1
 	bra	ret_C0		; salimos
@@ -438,7 +451,6 @@ finturn	%RESTORE
 
 
 
-
 	rseg	CONST
 
 car_txt	fcc	'COLOQUE CARGUERO'
@@ -450,5 +462,7 @@ sub_txt	fcc	'COLOQUE SUBMARINO'
 acz_txt	fcc	'COLOQUE ACORAZADO'
 	fcb	0
 
+gamebeg	fcc	'COMIENZA LA BATALLA'
+	fcb	0
 
 	END
