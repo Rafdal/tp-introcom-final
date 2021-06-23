@@ -1,17 +1,294 @@
 
 	p68h11
 
-	extern waitkey
+	extern	waitkey,delay
 
-	extern	shot_ID,coor2,coor1,copiado,play1,play2
-	extern	displ,frase2,turno,frase1
+	extern	shot_ID,coor2,coor1,copiado,reveal,play1,play2
+	extern	displ,frase2,turno,frase1,outchar,clrdis,clr_tab
 	extern	espiral,winner1,winner2
 	extern	canhun1,canhun2
 
-	public	setTurn,testWin,inRange
+	public	setTurn,setCoor,testWin,inRange,ld_Tabs
 
 $const.def
 $macros.def
+********** DISPL HANDLER ************
+	macro	%displ
+	pshx
+	ldx	#\0
+	jsr	displ
+	pulx
+	endmac
+*************************************
+
+
+	rseg	CODE
+
+ld_Tabs	equ	*
+
+	%displ	frase1
+	ldaa	#1
+	ldx	#play1
+	jsr	ldFleet		Cargamos la flota del player 1
+	bcs	retLDT
+
+	%displ	frase2
+	ldaa	#2
+	ldx	#play2
+	jsr	ldFleet		Cargamos la flota del player 2
+	bcs	retLDT
+
+	%displ	gamebeg		mensaje de inicio de juego
+retLDT	rts
+
+
+
+
+*******************************
+*	LOAD FLEET
+* AccA:	turno (player_id)		1|2
+* AccX: player_table (address)		play1|play2
+ldFleet	equ	*
+	jsr	clr_tab
+	staa	turno
+	jsr	reveal		mostramos las ubicaciones de los barcos
+
+	%displ	acz_txt
+	ldaa	#3
+	ldab	#ACZ
+	jsr	ld_ship
+	bcs	retFlt
+
+	%displ	car_txt
+	ldaa	#2
+	ldab	#CAR
+	jsr	ld_ship
+	bcs	retFlt
+
+	%displ	car_txt
+	ldaa	#2
+	ldab	#CAR
+	jsr	ld_ship
+	bcs	retFlt
+
+	%displ	sub_txt
+	ldaa	#3
+	ldab	#SUB
+	jsr	ld_ship
+	bcs	retFlt
+
+	jsr	delay		delay para que se vea el barco agregado
+retFlt	rts
+
+
+
+******************************
+*	LOAD SHIP
+* AccA: n_blocks
+* AccB: ship_id
+ld_ship	equ	*
+	jsr	clrdis
+	jsr	ld_bloc		Cargo el bloque de barco
+	bcs	ret_ls		salgo con C=1 para resetear
+	jsr	reveal		mostramos las ubicaciones de los barcos
+	deca
+	bne	ld_ship
+ret_ls	rts
+
+
+********************************
+*	LOAD	BLOCK
+* AccB: ship_id
+ld_bloc	equ	*
+	psha
+wait	jsr	waitkey		espero a que se presione una tecla
+	jsr	shipKey		analizo la tecla presionada
+	bcs	ret_bq
+	bvc	wait		si V=0, entonces aun no se presiono Fire
+	clr	coor1
+	clr	coor2
+ret_bq	pula
+	rts
+
+
+**************************************************************************************************************
+* 
+*	shipKey: evalúa qué tecla se apretó y a qué hacer según la tecla presionada.
+*		- Recibe por A el valor numérico de la tecla presionada en el teclado, y utiliza
+*			las equivalencias definidas como constantes al principio para poder indentificar la tecla.
+*		- Devuelve el carry en 1 si se confirmó el RESET, o en 0 si no hubo RESET.
+* 
+***************************************************************************************************************
+shipKey	equ	*
+
+	%BACKUP			; Hago backup de los registros
+
+************ TEST FOR RESET **********
+	cmpa	#RESET		; analizamos si la tecla preisonada fue RESET
+	bne	not_rst
+	sev
+	sec
+	bra	ret		; si fue, salimos con carry y con overflow
+
+*********** TEST FOR P1 KEY *********
+not_rst	cmpa	#P1_KEY		; analizamos si la tecla presionada fue P1_KEY
+	clv
+	beq	ret_C0		; salimos
+
+*********** TEST FOR P2 KEY *********
+	cmpa	#P2		; analizamos si la tecla preisonada fue P2
+	clv
+	beq	ret_C0		; si fue, salimos
+
+*********** TEST FOR FIRE KEY *********
+	cmpa	#FIREKEY	; analizamos si la tecla preisonada fue FIREKEY
+	bne	no_fire
+	ldaa	coor1
+	beq	ret_C0
+	ldaa	coor2
+	beq	ret_C0
+	jsr	setShip		; recibe por AccB el tipo de barco y lo coloca en la posicion
+	sev			; a la que apuntan las coordenadas. Coloco V=1
+	bra	ret_C0		; salimos
+
+*********** SET COORDINATES **************
+no_fire	jsr	setCoor		; si no fue ningun comando, entonces fue una tecla de coordenadas
+	clv
+
+ret_C0	clc			; pongo el carry en 0 indicando que no hubo reset
+
+ret	equ	*
+
+	%RESTORE		; Restauro los registros que guardé al comienzo
+
+	rts
+
+
+
+
+
+
+
+*********************************************************************************************
+*	Subrutina setShip: Se la llama cuando un jugador presiona FIREKEY! para colocar un barco
+*			en las coordenadas ingresadas
+*		Modifica una celda de la matriz del jugador actual
+*	- Recibe por coor1 y coor2 (variables) las coordenadas a las que se apuntó
+*	- Recibe por AccB el tipo de barco y lo coloca en la posicion
+**********************************************************************************************
+setShip	equ	*
+	%BACKUP
+	
+	ldaa	turno		; Evaluamos el turno del jugador
+	cmpa	#1		; y posicionamos X en el tablero del jugador actual
+	beq	player1
+
+player2	equ	*
+	ldx	#play2		
+	bra	set_s
+	
+player1	equ	*
+	ldx	#play1	
+		
+set_s	equ	*
+	pshb			; guardo en stack el tipo de barco
+
+	ldaa	coor1
+	ldab	#$A		; Hago que la coordenada 1 pase a ser un número de 0 a 5
+	sba			; restandole la menor coordenada posible
+	ldab	#COL*EL_SIZE	
+	mul	
+	abx			; Me posiciono en la fila correspondiente a la coordenada 1
+	ldab	coor2
+	decb			; Hacemos que AccB contenga al número de columna ingresado
+	abx			; "Desplazamos" a X sobre las columnas para llegar a la celda solicitada
+*	...			; En este punto X apunta a la celda disparada
+
+	pulb			; recupero el tipo de barco
+	stab	0,X		; y lo guardo en la posicion
+
+	%RESTORE
+	rts
+
+
+
+
+
+
+*==================================================================================
+*-	D O C U M E N T A R   M E J O R !!!! 	NO ENTENDI COMO FUNCIONA ESTO
+***************************************************************************************************************
+*	Subrutina "setCoor": Guarda en posiciones de memoria distintas las coordenadas ingresadas en el teclado
+*		- Recibe por AccA el valor de la tecla presionada (valor original del teclado)
+*		- Asigna a la tecla presionada un nuevo valor y la guarda en la posición de memoria correspondiente
+*		- Devuelve por posiciones de memoria establecidas en el main el valor de la coordenada presionada.
+***************************************************************************************************************
+setCoor	equ	*
+	
+	%BACKUP			; Hago backup de todos los registros
+	
+	cmpa	#$6		; Comparo con 6 (número más alto en la tabla de equivalencias)
+	bhi	numero		; para saber si es un Número o una letra
+
+	ldab	coor1		; Si la coordenada ingresada ya tiene algo, salgo para no sobreescribirla
+* bne	ret_sc
+
+	cmpa	#$2		; Como las asignaciones de teclas no son consecutivas, debemos evaluar a qué 
+	bhi	L04		; segmento pertenece.
+
+******** SEGMENT 1 **********
+	ldab	#$A		; convertimos la tecla apretada en el número de fila
+	aba			; Realizo una operación con el valor correspondiente al segmento al que pertenece
+	staa	coor1		; Como es una letra, la guardamos en la coordenada 1
+	bra	prt_let		; Luego de guardar la coordenada, salgo
+
+L04	ldab	#$9		; convertimos la tecla apretada en el número de fila
+	aba			
+	staa	coor1		; la guardamos en la coordenada 1
+
+prt_let	equ	*
+	ldab	#55		; convertimos la letra presionada a caracter ASCII
+	aba
+	ldab	#1		; la imprimimos en el display
+	jsr	outchar
+	bra	ret_sc		; salimos
+
+
+*____________________________
+*
+* Si es un número (columna)
+*____________________________
+
+numero	ldab	coor2		; Si la coordenada ingresada ya tiene algo, salgo para no sobreescribirla
+* bne	ret_sc
+	
+	cmpa	#$A		; Como las asignaciones de teclas no son consecutivas, debemos evaluar a qué
+	bhi	L06		; segmento pertenece.
+
+L05	ldab	#7		; convertimos el valor del teclado al valor numérico de la columna
+	sba
+	staa	coor2		; lo guardamos en la coordenada 2
+	bra	prt_num
+	
+L06	ldab	#8		; convertimos el valor del teclado al valor numérico de la columna
+	sba	
+	staa	coor2		; lo guardamos en la coordenada 2
+
+prt_num	equ	*
+	ldab	#$30		; convertimos el número a su carácter ASCII
+	aba
+	clrb
+	jsr	outchar		; lo imprimimos en la posición de más a la derecha del display
+	
+ret_sc	equ	*
+	
+	%RESTORE		; Restauro los registros
+
+	rts			; Salimos de la subrutina
+
+
+
+
 
 
 
@@ -174,11 +451,18 @@ finturn	%RESTORE
 
 
 
+	rseg	CONST
 
+car_txt	fcc	'COLOQUE CARGUERO'
+	fcb	0
 
+sub_txt	fcc	'COLOQUE SUBMARINO'
+	fcb	0
 
+acz_txt	fcc	'COLOQUE ACORAZADO'
+	fcb	0
 
-
-
+gamebeg	fcc	'COMIENZA LA BATALLA'
+	fcb	0
 
 	END

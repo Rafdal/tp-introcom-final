@@ -1,8 +1,8 @@
 	p68h11
 	
-	extern	initdis,outchar,delay,bitmap,testWin,setTurn,waitkey,asksure
+	extern	initdis,outchar,delay,bitmap,testWin,setTurn,waitkey,asksure,setCoor
 	extern	clrdis,displ,print
-	extern	espiral,pintar,copiado
+	extern	espiral,pintar,copiado,reveal,ld_Tabs
 
 	extern	inRange
 
@@ -25,7 +25,7 @@ main	equ	*
 	
 	lds	#stk_ini		; cargo la posicion inicial del stack
 
-init	jsr	setup			; ejecutamos las funciones de setup
+init	jsr	setup			; ejecutamos las funciones de setup			
 	
 loop	equ	*
 	jsr	waitkey			; esperamos a que se presione una tecla
@@ -38,14 +38,19 @@ loop	equ	*
 
 
 *****************************************************************************************
-*					SETUP
-*	Ejecuta las funciones de configuracion inicial
-*	- borra el display
-*	- inicia las variables en cero
-*	- borra el bitmap
+*					SETUP						*
+*	Ejecuta las funciones de configuracion inicial					*
+*	- borra el display								*
+*	- inicia las variables en cero							*
+*	- borra el bitmap								*
 *****************************************************************************************
 setup	equ	*
 	jsr	initdis			; inicializamos el teclado y display
+
+	ldx	#gametxt
+	jsr	displ
+	jsr	delay
+	jsr	delay
 
 	clr	coor1
 	clr	coor2
@@ -56,6 +61,9 @@ setup	equ	*
 	clr	canhun2		; vaciamos la memoria
 	jsr	clrdis		; vaciamos el display
 	
+	jsr	ld_Tabs			; cargar los barcos en cada tablero
+	bcs	setup			; si se presiono reset, reiniciamos
+
 	ldy	#play1			; cargo en el registro y el tablero de player 1
 	ldab	#COL*FIL*EL_SIZE	; inicio un contador del tamaño de la matriz
 	
@@ -92,8 +100,6 @@ L03	ldaa	#NEGRO
 	ldx	#frase1
 	jsr	displ			; imprimos en el display la frase que indica al usuario que es turno de jugador 1.
 	rts
-
-
 
 
 **************************************************************************************************************
@@ -157,75 +163,6 @@ ret	equ	*
 	rts	
 
 
-
-*=================================================================================
-*-	D O C U M E N T A R!!!! 	NO ENTENDI NADA COMO FUNCIONA ESTO
-***************************************************************************************************************
-*	Subrutina "setCoor": Guarda en posiciones de memoria distintas las coordenadas ingresadas en el teclado
-*		- Recibe por AccA el valor de la tecla presionada (valor original del teclado)
-*		- Asigna a la tecla presionada un nuevo valor y la guarda en la posición de memoria correspondiente
-*		- Devuelve por posiciones de memoria establecidas en el main el valor de la coordenada presionada.
-***************************************************************************************************************
-setCoor	equ	*
-	
-	%BACKUP			; Hago backup de todos los registros
-	
-	cmpa	#$6		; Comparo con 6 (número más alto en la tabla de equivalencias)
-	bhi	numero		; para saber si es un Número o una letra
-
-	ldab	coor1		; Si la coordenada ingresada ya tiene algo, salgo para no sobreescribirla
-	bne	ret_sc
-
-	cmpa	#$2		; Como las asignaciones de teclas no son consecutivas, debemos evaluar a qué 
-	bhi	L04		; segmento pertenece.
-
-******** SEGMENT 1 **********
-	ldab	#$A		; convertimos la tecla apretada en el número de fila
-	aba			; Realizo una operación con el valor correspondiente al segmento al que pertenece
-	staa	coor1		; Como es una letra, la guardamos en la coordenada 1
-	bra	prt_let		; Luego de guardar la coordenada, salgo
-
-L04	ldab	#$9		; convertimos la tecla apretada en el número de fila
-	aba			
-	staa	coor1		; la guardamos en la coordenada 1
-
-prt_let	equ	*
-	ldab	#55		; convertimos la letra presionada a caracter ASCII
-	aba
-	ldab	#1		; la imprimimos en el display
-	jsr	outchar
-	bra	ret_sc		; salimos
-*____________________________
-*
-* Si es un número (columna)
-*____________________________
-
-numero	ldab	coor2		; Si la coordenada ingresada ya tiene algo, salgo para no sobreescribirla
-	bne	ret_sc
-	
-	cmpa	#$A		; Como las asignaciones de teclas no son consecutivas, debemos evaluar a qué
-	bhi	L06		; segmento pertenece.
-
-L05	ldab	#7		; convertimos el valor del teclado al valor numérico de la columna
-	sba
-	staa	coor2		; lo guardamos en la coordenada 2
-	bra	prt_num
-	
-L06	ldab	#8		; convertimos el valor del teclado al valor numérico de la columna
-	sba	
-	staa	coor2		; lo guardamos en la coordenada 2
-
-prt_num	equ	*
-	ldab	#$30		; convertimos el número a su carácter ASCII
-	aba
-	clrb
-	jsr	outchar		; lo imprimimos en la posición de más a la derecha del display
-	
-ret_sc	equ	*
-	
-	%RESTORE		; Restauro los registros
-
-	rts			; Salimos de la subrutina
 
 
 
@@ -533,7 +470,6 @@ endarou	%RESTORE
 
 
 
-*==========================================================================================================================
 
 	rseg	VARS
 **************************************************
@@ -541,10 +477,7 @@ endarou	%RESTORE
 *	ZONA DE VARIABLES
 *
 **************************************************
-*______________________________________________
-*
-*	Variables del juego
-*_____________________________________________
+*******	Variables del juego *******************
 coor1	rmb	1		; almacena el número de fila ingresado por el usuario
 coor2	rmb	1		; almacena el número de columna ingresado por el usuario
 turno	rmb	1		; almacena de quién es el turno actual
@@ -555,77 +488,28 @@ acorz1	rmb	1		; Contador de veces que el jugador 1 toca un ACORZD
 acorz2	rmb	1		; Contador de veces que el jugador 2 toca un ACORZD
 
 
-*********************************************************************************************
-*
-*	Zona de stack
-*
-*********************************************************************************************
-stack	rmb	50
+*********************************
+*	Zona de stack		*
+*********************************
+stack	rmb	100
 stk_ini	equ	*-1
 
 ************************************************************
-*
 *	Inicialización de las matrices de los dos jugadores
-*
 ************************************************************
 play1	rmb	COL*FIL*EL_SIZE		; Inicializo tablero del jugador 1
 play2	rmb	COL*FIL*EL_SIZE		; Inicializo tablero del jugador 2
-*_______________________________________________
-*
+
+
 * Frase de ganador
-*______________________________________________
 
 winner1	fcc	'GANADOR PLAYER 1'
 	fcb	0
 winner2	fcc	'GANADOR PLAYER 2'
 	fcb	0
 
-
-*******************************************************************
-*
-*	TABLERO PLAYER 1: 
-*		
-*******************************************************************
-	ORG	play1
-
-*		 1   2   3   4   5   6
-
-	fcb	___,SUB,___,CAR,___,___		; A
-	
-	fcb	___,___,___,CAR,___,___		; B
-	
-	fcb	___,___,___,___,___,SUB		; C
-	
-	fcb	___,ACZ,ACZ,ACZ,___,___		; D
-	
-	fcb	SUB,___,___,___,___,___		; E
-	
-	fcb	___,___,CAR,CAR,___,___		; F
-
-	
-*******************************************************************
-*
-*	TABLERO PLAYER 2:
-*	
-*******************************************************************
-	ORG	play2
-
-*		 1   2   3   4   5   6
-
-	fcb	___,___,___,___,SUB,___		; A
-	
-	fcb	ACZ,___,___,___,___,___		; B
-	
-	fcb	ACZ,___,___,SUB,___,CAR		; C
-	
-	fcb	ACZ,___,___,___,___,CAR		; D
-	
-	fcb	___,___,___,___,___,___		; E
-	
-	fcb	CAR,CAR,___,___,___,SUB		; F
-
-
-
-*===================================================================================================================
+* Frase de inicio del juego
+gametxt	fcc	'BATALLA NAVAL'
+	fcb	0
 
 	END
