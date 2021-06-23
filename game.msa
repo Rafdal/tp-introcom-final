@@ -214,15 +214,23 @@ set_s	equ	*
 
 
 
-
-*==================================================================================
-*-	D O C U M E N T A R   M E J O R !!!! 	NO ENTENDI COMO FUNCIONA ESTO
-***************************************************************************************************************
-*	Subrutina "setCoor": Guarda en posiciones de memoria distintas las coordenadas ingresadas en el teclado
-*		- Recibe por AccA el valor de la tecla presionada (valor original del teclado)
-*		- Asigna a la tecla presionada un nuevo valor y la guarda en la posición de memoria correspondiente
-*		- Devuelve por posiciones de memoria establecidas en el main el valor de la coordenada presionada.
-***************************************************************************************************************
+*****************************************************************************************
+*			Subrutina:	setCoor						*
+*****************************************************************************************
+* Descripcion:										*
+*	Guarda en posiciones de memoria distintas las coordenadas 			*
+*	ingresadas en el teclado							*
+*											*
+* Inputs: 										*
+*   - Recibe por AccA el valor de la tecla presionada (valor original del teclado)	*
+* Outputs:										*
+*   - Valores de las coordenadas en las posiciones designadas para tal fin		*
+*											*
+* Notas:										*
+*	Asigna a la tecla presionada un nuevo valor y la guarda 			*
+*	en la posición de memoria correspondiente					*
+* 	Muestra las coordenadas presionadas en el display				*
+*****************************************************************************************
 setCoor	equ	*
 	
 	%BACKUP			; Hago backup de todos los registros
@@ -253,11 +261,7 @@ prt_let	equ	*
 	jsr	outchar
 	bra	ret_sc		; salimos
 
-
-*____________________________
-*
-* Si es un número (columna)
-*____________________________
+******** NÚMERO (COLUMNA) **********
 
 numero	ldab	coor2		; Si la coordenada ingresada ya tiene algo, salgo para no sobreescribirla
 * bne	ret_sc
