@@ -1,10 +1,10 @@
 
 	p68h11
 
-	extern	waitkey
+	extern	waitkey,delay
 
 	extern	shot_ID,coor2,coor1,copiado,reveal,play1,play2
-	extern	displ,frase2,turno,frase1,outchar
+	extern	displ,frase2,turno,frase1,outchar,clrdis,clr_tab
 	extern	espiral,winner1,winner2
 	extern	canhun1,canhun2
 
@@ -12,29 +12,92 @@
 
 $const.def
 $macros.def
+********** DISPL HANDLER ************
+	macro	%displ
+	pshx
+	ldx	#\0
+	jsr	displ
+	pulx
+	endmac
+*************************************
+
 
 	rseg	CODE
 
 modTest	equ	*
 
 	ldaa	#1
-	staa	turno
-
 	ldx	#play1
-	jsr	reveal		mostramos las ubicaciones de los barcos
+	jsr	ldFleet		Cargamos la flota del player 1
 
-wait	jsr	waitkey		espero a que se presione una tecla
-	ldab	#ACZ
-	jsr	shipKey		analizo la tecla presionada
-	bvc	wait		si V=0, entonces aun no se presiono Fire
-	bcs	ret_C1		salgo con C=1 para resetear
+	ldaa	#2
+	ldx	#play2
+	jsr	ldFleet		Cargamos la flota del player 1
 
-	ldx	#play1
-	jsr	reveal		mostramos las ubicaciones de los barcos
-	jsr	waitkey
+	jsr	waitkey		Esperamos la aprobacion del publico
 
 ret_C1	rts
 
+
+
+
+*******************************
+*	LOAD FLEET
+* AccA:	turno (player_id)		1|2
+* AccX: player_table (address)		play1|play2
+ldFleet	equ	*
+	jsr	clr_tab
+	staa	turno
+	jsr	reveal		mostramos las ubicaciones de los barcos
+
+	%displ	acz_txt
+	ldaa	#3
+	ldab	#ACZ
+	jsr	ld_ship
+
+	%displ	car_txt
+	ldaa	#2
+	ldab	#CAR
+	jsr	ld_ship
+
+	%displ	car_txt
+	ldaa	#2
+	ldab	#CAR
+	jsr	ld_ship
+
+	%displ	sub_txt
+	ldaa	#3
+	ldab	#SUB
+	jsr	ld_ship
+	jsr	delay		delay para que se vea el barco agregado
+	rts
+
+******************************
+*	LOAD SHIP
+* AccA: n_blocks
+* AccB: ship_id
+ld_ship	equ	*
+	jsr	clrdis
+	jsr	ld_bloc		Cargo el bloque de barco
+	jsr	reveal		mostramos las ubicaciones de los barcos
+	bcs	ret_ls		salgo con C=1 para resetear
+	deca
+	bne	ld_ship
+ret_ls	rts
+
+
+********************************
+*	LOAD	BLOCK
+* AccB: ship_id
+ld_bloc	equ	*
+	psha
+wait	jsr	waitkey		espero a que se presione una tecla
+	jsr	shipKey		analizo la tecla presionada
+	bvc	wait		si V=0, entonces aun no se presiono Fire
+	clr	coor1
+	clr	coor2
+	pula
+	rts
 
 
 
@@ -155,7 +218,7 @@ setCoor	equ	*
 	bhi	numero		; para saber si es un Número o una letra
 
 	ldab	coor1		; Si la coordenada ingresada ya tiene algo, salgo para no sobreescribirla
-	bne	ret_sc
+* bne	ret_sc
 
 	cmpa	#$2		; Como las asignaciones de teclas no son consecutivas, debemos evaluar a qué 
 	bhi	L04		; segmento pertenece.
@@ -176,13 +239,15 @@ prt_let	equ	*
 	ldab	#1		; la imprimimos en el display
 	jsr	outchar
 	bra	ret_sc		; salimos
+
+
 *____________________________
 *
 * Si es un número (columna)
 *____________________________
 
 numero	ldab	coor2		; Si la coordenada ingresada ya tiene algo, salgo para no sobreescribirla
-	bne	ret_sc
+* bne	ret_sc
 	
 	cmpa	#$A		; Como las asignaciones de teclas no son consecutivas, debemos evaluar a qué
 	bhi	L06		; segmento pertenece.
@@ -374,10 +439,16 @@ finturn	%RESTORE
 
 
 
+	rseg	CONST
 
+car_txt	fcc	'COLOQUE CARGUERO'
+	fcb	0
 
+sub_txt	fcc	'COLOQUE SUBMARINO'
+	fcb	0
 
-
+acz_txt	fcc	'COLOQUE ACORAZADO'
+	fcb	0
 
 
 	END

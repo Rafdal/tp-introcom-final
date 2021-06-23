@@ -3,7 +3,7 @@
 *************************************************************************
 	p68h11
 
-	public delay,copiado,reveal
+	public delay,copiado,reveal,clr_tab
 	extern bitmap
 
 $macros.def
@@ -14,8 +14,6 @@ $const.def
 *******************************************************************************************************************
 * 	Subrutina Reveal: Muestra la ubicacion de los barcos en el Bitmap
 *		- Recibe por X la posición de incio del tablero a mostrar
-*		- Hace uso de las constantes definidas en el programa para definir el tamaño de las 
-*		matrices (FIL y COL)
 *******************************************************************************************************************
 reveal	equ	*
 	
@@ -58,12 +56,33 @@ pass	inx				; Apunto a las siguientes celdas de origen y destino
 	rts
 
 
+*******************************************************************************************************************
+* 	Subrutina CLEAR TAB: Borra todos los barcos de un tablero
+*		- Recibe por X la posición de incio del tablero a borrar
+*******************************************************************************************************************
+clr_tab	equ	*
+	psha
+	pshb
+	pshx
+	
+	ldab	#36			; Defino un contador de la cantidad de valores a copiar
+	ldaa	#___			; cargo A con el ID de un bloque de agua
+L02	equ	*			; Copio el contenido de la celda apuntada a la celda destino 
+	staa	0,X			; correspondiente.
+	
+	inx				; Apunto a las siguientes celdas de origen y destino
+	decb				; Decremento el contador y compruebo si terminé
+	bne	L02
+
+	pulx
+	pulb
+	pula
+	rts
+
 
 *******************************************************************************************************************
 * 	Subrutina copiado: Copia el contenido de una matriz al Bitmap
 *		- Recibe por X la posición de incio del tablero por copiar
-*		- Hace uso de las constantes definidas en el programa para definir el tamaño de las 
-*		matrices (FIL y COL)
 *******************************************************************************************************************
 copiado	equ	*
 	
