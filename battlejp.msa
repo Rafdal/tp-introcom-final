@@ -1,0 +1,661 @@
+	p68h11
+
+******************************************************
+*	Subrutinas externas
+******************************************************
+	extern	initdis,outchar,delay,bitmap,
+	extern	clrdis,displ,print,asksure
+	extern	espiral,pintar,copiado
+	extern	inRange,testWin,setTurn,waitkey
+
+******************************************************
+*	Variables externas
+******************************************************
+	extern	frase1
+
+
+******************************************************
+*	Subrutinas públicas utilizadas por otros
+******************************************************
+	public	shot_ID,coor2,coor1
+	public	turno,play1,play2
+	public	winner1,winner2
+	public	canhun1,canhun2,acorz1,acorz2
+
+******************************************************
+*	Definiciones y Macros utilizadas
+******************************************************
+$const.def
+$macros.def
+
+
+
+	rseg	CODE
+
+*********************************************************
+*		MAIN PROGRAM				*
+*********************************************************
+*	Programa Principal de la Batalla Naval		*
+*********************************************************
+
+main	equ	*	
+	
+	lds	#stk_ini		; cargo la posicion inicial del stack
+
+init	jsr	setup			; ejecutamos las funciones de setup
+	
+loop	equ	*
+	jsr	waitkey			; esperamos a que se presione una tecla
+	jsr	evalKey			; se evalua la tecla presionada (en AccA)
+	bcs	init			; si se apretó reset y se confirmó, volvemos a empezar de 0
+	jsr	testWin			; analizamos si hubo un ganador
+	bcs	init			; si hubo un ganador, reiniciamos el juego
+	bra	loop			; si no hubo ganador, volvemos a analizar el teclado
+
+
+
+*********************************************************
+*			SETUP				*
+*********************************************************
+*	Ejecuta las funciones de configuracion inicial	*
+*	- borra el display				*
+*	- inicia las variables en cero			*
+*	- borra el bitmap				*
+**********************************************************
+setup	equ	*
+	jsr	initdis			; inicializamos el teclado y display
+
+	clr	coor1
+	clr	coor2
+	clr	shot_ID
+	clr	acorz1
+	clr	acorz2
+	clr	canhun1	
+	clr	canhun2		; vaciamos la memoria
+	jsr	clrdis		; vaciamos el display
+	
+	ldy	#play1			; cargo en el registro y el tablero de player 1
+	ldab	#COL*FIL*EL_SIZE	; inicio un contador del tamaño de la matriz
+	
+L01	ldaa	0,y			; cargo el contenido del elemento de la matriz
+	anda	#MASK			; mantengo los 2 primeros bits que indican el tipo de barco
+	oraa	#NEGRO			; cambio el color a negro
+	staa	0,y			; lo imprimo en el tablero de player 1
+	iny
+	decb				; Decremento el contador
+	bne	L01			; repito hasta que el contador sea 0
+
+	ldy	#play2
+	ldab	#COL*FIL*EL_SIZE	; inicio un contador del tamaño de la matriz
+
+L02	ldaa	0,y
+	anda	#MASK			; mantengo los 2 primeros bits que indican el tipo de barco
+	oraa	#NEGRO			; cambio el color a negro
+	staa	0,y			; lo imprimo en el tablero de player 2
+	iny
+	decb
+	bne	L02
+
+	ldy	#bitmap
+	ldab	#COL*FIL*EL_SIZE	; inicio un contador del tamaño de la matriz
+
+L03	ldaa	#NEGRO
+	staa	0,y
+	iny
+	decb
+	bne	L03
+
+	ldaa	#1			; indicamos al programa que es el turno del jugador 1 al comienzo de cada partida
+	staa	turno			; guardando en la variable "turno" el número 1
+	ldx	#frase1
+	jsr	displ			; imprimos en el display la frase que indica al usuario que es turno de jugador 1.
+	rts
+
+
+
+*********************************************************
+*							*
+*		SUBRUTINAS				*
+*							*
+*********************************************************
+
+*****************************************************************************************
+*			Subrutina:	evalKey						*
+*****************************************************************************************
+* Descripcion:										*
+*	Evalúa qué tecla se apretó y a qué hacer según la tecla presionada.		*
+*											*
+* Inputs: 										*
+*   - Recibe por A el valor numérico de la tecla presionada en el teclado		*
+* Outputs:										*
+*   - Devuelve el carry en 1 si se confirmó el RESET, o en 0 si no hubo RESET.		*
+*											*
+* Notas:										*
+* 	utiliza las equivalencias definidas como constantes al principio 		*
+*	para poder indentificar la tecla.						*
+*****************************************************************************************
+
+evalKey	equ	*
+
+	%BACKUP			; Hago backup de los registros
+
+************ TEST FOR RESET **********
+	cmpa	#RESET		; analizamos si la tecla preisonada fue RESET
+	bne	no_rst
+	jsr	asksure		; pregunto al usuario si esta seguro de resetear
+	bcs	ret		; si se confirma el RESET, salimos con el carry en 1.
+	ldaa	turno
+	adda	#'0'		; agrego el desfase ASCII
+	ldab	#3		; apunto a la posicion izquierda del display
+	jsr	outchar
+	clr	coor1		; borramos las coordenadas
+	clr	coor2
+	clr	shot_ID		; y el estado de disparo
+	bra	ret_C0		; si no se confirma, salimos con carry=0.
+
+*********** TEST FOR P1 KEY *********
+no_rst	cmpa	#P1_KEY		; analizamos si la tecla presionada fue P1_KEY
+	bne	no_P1		
+	jsr	setTurn		; si lo fue, vamos al proceso de cambiar el turno
+	bra	ret_C0		; salimos
+
+*********** TEST FOR P2 KEY *********
+no_P1	cmpa	#P2		; analizamos si la tecla preisonada fue P2
+	bne	no_P2
+	jsr	setTurn		; si lo fue, vamos al proceso de cambiar el turno
+	bra	ret_C0		; salimos
+
+******** TEST FOR MISSED SHOT *******
+no_P2	tst	shot_ID		; analizamos si hubo un disparo errado previo a la pulsación actual.
+	bne	ret_C0		; si hubo, salimos
+	
+*********** TEST FOR FIRE KEY *********
+	cmpa	#FIREKEY	; analizamos si la tecla preisonada fue FIRE!
+	bne	no_fire
+	jsr	runFire		; si lo fue, vamos a realizar el disparo
+	bra	ret_C0		; salimos
+
+*********** SET COORDINATES **************
+no_fire	jsr	setCoor		; si no fue ningun comando, entonces fue una tecla de coordenadas
+
+ret_C0	clc			; pongo el carry en 0 indicando que no hubo reset
+
+ret	equ	*
+
+	%RESTORE		; Restauro los registros que guardé al comienzo
+
+	rts	
+
+*****************************************************************************************
+*			Subrutina:	setCoor						*
+*****************************************************************************************
+* Descripcion:										*
+*	Guarda en posiciones de memoria distintas las coordenadas 			*
+*	ingresadas en el teclado							*
+*											*
+* Inputs: 										*
+*   - Recibe por AccA el valor de la tecla presionada (valor original del teclado)	*
+* Outputs:										*
+*   - Valores de las coordenadas en las posiciones designadas para tal fin		*
+*											*
+* Notas:										*
+*	Asigna a la tecla presionada un nuevo valor y la guarda 			*
+*	en la posición de memoria correspondiente					*
+* 	Muestra las coordenadas presionadas en el display				*
+*****************************************************************************************
+
+setCoor	equ	*
+	
+	%BACKUP			; Hago backup de todos los registros
+	
+	cmpa	#$6		; Comparo con 6 (número más alto en la tabla de equivalencias)
+	bhi	numero		; para saber si es un Número o una letra
+
+	ldab	coor1		; Si la coordenada ingresada ya tiene algo, salgo para no sobreescribirla
+	bne	ret_sc
+
+	cmpa	#$2		; Como las asignaciones de teclas no son consecutivas, debemos evaluar a qué 
+	bhi	L04		; segmento pertenece.
+
+******** SEGMENT 1 **********
+	ldab	#$A		; convertimos la tecla apretada en el número de fila
+	aba			; Realizo una operación con el valor correspondiente al segmento al que pertenece
+	staa	coor1		; Como es una letra, la guardamos en la coordenada 1
+	bra	prt_let		; Luego de guardar la coordenada, salgo
+
+L04	ldab	#$9		; convertimos la tecla apretada en el número de fila
+	aba			
+	staa	coor1		; la guardamos en la coordenada 1
+
+prt_let	equ	*
+	ldab	#55		; convertimos la letra presionada a caracter ASCII
+	aba
+	ldab	#1		; la imprimimos en el display
+	jsr	outchar
+	bra	ret_sc		; salimos
+
+******** NÚMERO (COLUMNA) **********
+
+numero	ldab	coor2		; Si la coordenada ingresada ya tiene algo, salgo para no sobreescribirla
+	bne	ret_sc
+	
+	cmpa	#$A		; Como las asignaciones de teclas no son consecutivas, debemos evaluar a qué
+	bhi	L06		; segmento pertenece.
+
+L05	ldab	#7		; convertimos el valor del teclado al valor numérico de la columna
+	sba
+	staa	coor2		; lo guardamos en la coordenada 2
+	bra	prt_num
+	
+L06	ldab	#8		; convertimos el valor del teclado al valor numérico de la columna
+	sba	
+	staa	coor2		; lo guardamos en la coordenada 2
+
+prt_num	equ	*
+	ldab	#$30		; convertimos el número a su carácter ASCII
+	aba
+	clrb
+	jsr	outchar		; lo imprimimos en la posición de más a la derecha del display
+	
+ret_sc	equ	*
+	
+	%RESTORE		; Restauro los registros
+
+	rts			; Salimos de la subrutina
+
+
+*****************************************************************************************
+*			Subrutina:	runFire						*
+*****************************************************************************************
+* Descripcion:										*
+*	Se la llama cuando un jugador presiona FIRE! para realizar un 			*
+*	disparo a las coordenadas ingresadas						*
+*											*
+* Inputs: 										*
+*   - 	Recibe por coor1 y coor2 (variables) las coordenadas a las que se apuntó	*
+* Outputs:										*
+*   - 	Modifica una celda de la matriz del jugador contrario al de turno cuando 	*
+*	se realiza un disparo								*
+*											*
+*****************************************************************************************
+
+runFire	equ	*
+	
+	%BACKUP
+	
+	ldaa	turno		; Evaluamos qué jugador tiene el turno de jugar
+	cmpa	#1		; y posicionamos X en el tablero del jugador contrario
+	beq	player1
+
+player2	equ	*
+	ldx	#play1		
+	bra	shot
+	
+player1	equ	*
+	ldx	#play2	
+		
+shot	equ	*
+	pshx			; Guardo en el stack la posición de la primera celda de la matriz analizada para usarla luego
+	ldaa	coor1
+	ldab	#$A		; Hago que la coordenada 1 pase a ser un número de 0 a 5
+	sba			; restandole la menor coordenada posible
+	ldab	#COL*EL_SIZE	
+	mul	
+	abx			; Me posiciono en la fila correspondiente a la coordenada 1
+	ldab	coor2
+	decb			; Hacemos que AccB contenga al número de columna ingresado
+	abx			; "Desplazamos" a X sobre las columnas para llegar a la celda solicitada
+*	...			; En este punto X apunta a la celda disparada
+	ldaa	0,X
+	anda	#MASKCOL	; Analizamos si la celda apuntada ya fue disparada anteriormente
+	cmpa	#NEGRO
+	bne	end_dis		; Si ya esta tocada, no modifico el estado de disparo y salgo
+
+	ldaa	0,x		; En el caso de ser un disparo válido, analizo qué consecuencia tiene
+	anda	#MASK		
+	beq	agua		; Si todos los bits de la celda son 0, es agua
+	cmpa	#SUBMAR
+	beq	hundido		; Si la celda disparada contiene un submarino, pasa a estar hundido
+	cmpa	#ACORZD	
+	beq	acortoc		; Si la celda disparada contiene parte de un acorazado, evalúo si lo hundí en su totalidad
+
+car_toc	equ	*		; carguero tocado	
+
+	jsr	around		; Analizamos si el carguero tocado se hunde o no analizando las celdas contiguas
+	bcc	nohund		; Si no está hundido, significa que lo toco parcialmente y pinto la celda de amarillo.
+	bra	hundido		; Si está hundido, hundo el carguero (pinto la celda de rojo).
+
+acortoc	equ	*
+	ldab	turno		; Evalúo de qué jugador es el turno para aumentar el contador de veces que se tocó a un ACORZD
+	cmpb	#1
+	beq	acorzi1
+
+*****************************************************************************************
+*	Zona donde el jugador 2 tocó un acorazado					*
+*****************************************************************************************
+acorzi2	inc	acorz2		; Si el jugador 2 tocó un acorazado, aumento el contador de veces que lo hizo
+	ldaa	acorz2
+	cmpa	#TAMACZ
+	beq	aczhund		; Si el contador es igual a 4 (tamaño del acorazado), significa que lo hundió
+	ldaa	0,X		; Si todavía no es igual a 4, lo tocó parcialmente (se pinta la celda de amarillo).
+	anda	#MASK	
+	bra	nohund
+
+*****************************************************************************************
+*	Zona donde el jugador 1 tocó un acorazado					*
+*****************************************************************************************
+acorzi1	inc	acorz1		; Si el jugador 1 tocó un acorazado, aumento el contador de veces que lo hizo
+	ldaa	acorz1
+	cmpa	#TAMACZ		
+	beq	aczhund		; Si el contador es igual a 4 (tamaño del acorazado), significa que lo hundió
+	ldaa	0,X		; Si todavía no es igual a 4, lo tocó parcialmente (se pinta la celda de amarillo).
+	anda	#MASK
+
+*****************************************************************************************
+*	Zona donde se cambia el color de una celda indicando que se tocó parcialmente 	*
+*	a un barco									*
+*****************************************************************************************
+nohund	oraa	#AMAR		; Se carga en AccA el color amarillo sin modificar los datos de los dos primeros bits
+	staa	0,X		; y se guarda en la celda apuntada, cambiando su color
+	bra	end_dis
+
+*****************************************************************************************
+*	Zona donde se hunden a los barcos tocados en su totalidad			*
+*****************************************************************************************
+aczhund	equ	*
+	jsr	h_acorz		; Si un jugador hundió un acorazado, saltamos a la subrutina que cambia el color de 
+	bra	sink		; todas sus celdas a rojo
+
+hundido	equ	*
+	oraa	#ROJO		; (Usado en caso que se haya hundido otro barco):
+	staa	0,X		; cambiamos el color de una celda a rojo.
+
+*****************************************************************************************
+*	Zona donde aumento la cantidad de hundidos por el jugador de turno		*
+*****************************************************************************************
+
+sink	ldaa	turno		; Se evalúa de qué jugador es el turno para aumentar su contador
+	cmpa	#1		; de barcos hundidos
+	beq	hun1
+
+hun2	inc	canhun2		; Aumentamos el contador del jugador 2 en caso de que el turno es suyo
+	bra	end_dis
+
+hun1	inc	canhun1		; Aumentamos el contador del jugador 1 en caso de que el turno es suyo
+	bra	end_dis
+
+*****************************************************************************************
+*	Zona donde se llega si no se tocó ningún barco en el disparo.			*
+*****************************************************************************************	
+agua	equ	*
+	oraa	#AZUL		; Si el disparo resultó en "agua" cambiamos el color de la celda
+	staa	0,X		; a azul para indicar de alguna forma que ya se disparó.
+	ldaa	#1
+	staa	shot_ID		; Se indica que el jugador de turno disparó y no debe volver a jugar
+
+*******************************************************************************************
+* Fin de la subrutina, Limpio el display dejando el turno visible y borro las coordenadas *
+*******************************************************************************************
+end_dis	equ	*	
+	ldaa	#' '
+	clrb
+	jsr	outchar		; Imprimimos un espacio en los lugares del display donde están las
+	incb			; coordenadas ingresadas
+	jsr	outchar
+	clr	coor1		; Borramos las posiciones de memoria de las coordenadas
+	clr	coor2
+	
+	pulx			; Recupero X (Guardado al principio) que contiene la posición de la primera
+*	...			; celda de la matriz modificada.
+	jsr	copiado		; Al salir de la subrutina, copio el contenido del tablero modificado
+	%RESTORE		; al bitmap
+
+	rts
+
+*****************************************************************************************
+*			Subrutina:	h_acorz						*
+*****************************************************************************************
+* Descripcion:										*
+*	Esta subrutina hunde al acorazado						*
+*	Una vez que se tocan todas las partes de un acorazado, esta subrutina 		*
+*	cambia el color de cada parte a rojo, indicando que se hundió en su totalidad.	*
+*											*
+* Inputs: 										*
+*   - La variable "turno", para saber qué jugador hundió un Acorazado			*
+* Outputs:										*
+*   - Cambio de color del acorazado hundido						*
+*											*
+*****************************************************************************************
+
+h_acorz	equ	*
+	%BACKUP
+	ldab	turno			; Analizo si es el turno del jugador 1 o 2, y me posiciono sobre
+	cmpb	#1			; la primera celda del tablero contrario
+	beq	user1
+
+	ldx	#play1
+	bra	hundir
+
+user1	ldx	#play2
+
+hundir	equ	*			; Iniciamos un contador de partes de acorazado a hundir (celdas) y comienzo
+	ldab	#TAMACZ			; a recorrer la matriz, cuando hundimos todas las partes, terminamos
+sigiceb	ldaa	0,x
+	anda	#MASK
+	cmpa	#ACORZD
+	bne	noiceb
+	oraa	#ROJO			; Para hundir las partes, cambiamos el color de las celdas a rojo.
+	staa	0,x
+	decb				; si se hundió una parte, decrementamos el contador de partes
+	cmpb	#0			
+	beq	exitice			; si es 0, terminamos
+noiceb	inx				; si todavía no hundí todas las partes, nos posicionamos sobre la celda siguiente
+	bra	sigiceb			; y continamos
+
+exitice	equ	*
+	%RESTORE
+	rts
+
+*****************************************************************************************
+*			subrutina:	around						*
+*****************************************************************************************
+* Descripcion:										*
+*	Evalúa si alguna otra celda contigua al carguero está tocada			*
+*											*
+* Inputs: 										*
+*   - Recibe por X la posición del tablero a la que se disparó				*
+* 											*
+* Outputs:										*
+*   - 	Devuelve el carry en 1 si se detectó otra casilla contigua 			*
+*	con el carguero tocada o en Carry en 0, si no se tocó al carguero 		*
+*	en una casilla contigua.							*
+*											*
+*****************************************************************************************
+
+around	equ	*
+
+	%BACKUP
+*****************************************************************************************
+*	Zona donde se analiza la celda de la derecha a la disparada			*
+*****************************************************************************************
+der	pshx			; Guardamos la posición de la celda disparada, ya que trabajaremos con ella 
+*	...			; y no queremos modificarla
+	ldaa	coor1		; Actualizamos las coordenadas a las de la celda de la derecha
+	ldab	coor2
+	incb			; incremento en 1 la coordenada de las columnas para ir a la der. en la matriz
+
+	jsr	inRange		; Evaluamos si las "nuevas coordenadas" son válidas (pertenecen a un tablero)
+	
+	bcs	izq		; Si no son válidas, no analizo la celda y paso al siguiente caso
+	
+	inx			; Nos movemos uno a la derecha porque existe dicha posición
+
+	%COMTOC			; Comparamos la celda actual con un carguero tocado, si coincide, cambiamos
+*	...			; el color de la celda a rojo, indicamos que el carguero está hundido y salimos
+
+*****************************************************************************************
+*	Zona donde se analiza la celda de la izquierda a la disparada			*
+*****************************************************************************************
+izq	pulx			; Recuperamos en X la posición de la celda disparada y lo volvemos a guardar en
+	pshx			; el stack para no perderlo durante las cuentas
+	ldaa	coor1		; Actualizamos las coordenadas a las de la celda de la izquierda
+	ldab	coor2
+	decb			; Decrementamos en 1 la coordenada de las columnas para ir a la izq. en la matriz
+	jsr	inRange		; Evaluamos si las "nuevas coordenadas" son válidas (pertenecen a un tablero)
+	
+	bcs	arr		; Si no son válidas, no analizamos la celda y pasamos al siguiente caso
+	
+	dex			; Nos movemos a la posición de la izquierda, ya que corroboramos que existe
+
+	%COMTOC			; Comparamos la celda actual con un carguero tocado, si coincide, cambiamos
+*	...			; el color de la celda a rojo, indicamos que el carguero está hundido y salimos
+
+*****************************************************************************************
+*	Zona donde se analiza la celda de arriba a la disparada				*
+*****************************************************************************************
+arr	pulx			; Recuperamos en X la posición de la celda disparada y lo volvemos a guardar en
+	pshx			; el stack para no perderlo durante las cuentas
+	ldaa	coor1		; Actualizamos las coordenadas a las de la celda de arriba
+	deca			; Decrementamos en uno la coordenada de las filas, para "subir" en la matriz
+	ldab	coor2		
+
+	jsr	inRange		; Evaluamos si las "nuevas coordenadas" son válidas (pertenecen a un tablero)
+
+	bcs	abaj		; Si las coordenadas no están en la matriz, salteamos la posibilidad
+
+	xgdx			; Como no hay error, subimos una fila en la matriz
+	subd	#COL*EL_SIZE
+	xgdx
+	
+	%COMTOC			; Comparamos la celda actual con un carguero tocado, si coincide, cambiamos
+*	...			; el color de la celda a rojo, indicamos que el carguero está hundido y salimos	
+
+*****************************************************************************************
+*	Zona donde se analiza la celda de abajo a la disparada				*
+*****************************************************************************************
+abaj	pulx			; Recuperamos en X la posición de la celda disparada y lo volvemos a guardar en
+	pshx			; el stack para no perderlo durante las cuentas
+	ldaa	coor1		; Actualizamos las coordenadas a las de la celda de abajo
+	inca			; Incrementamos en uno la coordenada de las filas, para "bajar" en la matriz
+	ldab	coor2
+	jsr	inRange		; Evaluamos si las "nuevas coordenadas" son válidas (pertenecen a un tablero)
+	
+	bcs	finarou		; Si las coordenadas no están en la matriz, salteamos la posibilidad
+	
+	ldab	#COL*EL_SIZE	; Como no hay error, bajamos una fila en la matriz
+	abx
+
+	%COMTOC			; Comparamos la celda actual con un carguero tocado, si coincide, cambiamos
+*	...			; el color de la celda a rojo, indicamos que el carguero está hundido y salimos	
+
+*****************************************************************************************
+*	Zona donde no se encontró una celda contigua tocada				*
+*****************************************************************************************
+finarou	pulx			; Recuperamos en X la posición de la celda disparada 
+	clc			; Seteamos el carry en 0 indicando que el carguero no se hundió
+
+*****************************************************************************************
+*	Fin de la subrutina around							*
+*****************************************************************************************
+endarou	%RESTORE
+	rts
+
+
+
+
+*==========================================================================================================================
+
+	rseg	VARS
+**************************************************
+*
+*	ZONA DE VARIABLES
+*
+**************************************************
+*______________________________________________
+*
+*	Variables del juego
+*_____________________________________________
+coor1	rmb	1		; almacena el número de fila ingresado por el usuario
+coor2	rmb	1		; almacena el número de columna ingresado por el usuario
+turno	rmb	1		; almacena de quién es el turno actual
+shot_ID	rmb	1		; almacena un indicador de si hubo un disparo al agua
+canhun1	rmb	1		; Contador de barcos hundidos por el player 1
+canhun2	rmb	1		; Contador de barcos hundidos por el player 2
+acorz1	rmb	1		; Contador de veces que el jugador 1 toca un ACORZD
+acorz2	rmb	1		; Contador de veces que el jugador 2 toca un ACORZD
+
+
+*********************************************************************************************
+*
+*	Zona de stack
+*
+*********************************************************************************************
+stack	rmb	50
+stk_ini	equ	*-1
+
+************************************************************
+*
+*	Inicialización de las matrices de los dos jugadores
+*
+************************************************************
+play1	rmb	COL*FIL*EL_SIZE		; Inicializo tablero del jugador 1
+play2	rmb	COL*FIL*EL_SIZE		; Inicializo tablero del jugador 2
+*_______________________________________________
+*
+* Frase de ganador
+*______________________________________________
+
+winner1	fcc	'GANADOR PLAYER 1'
+	fcb	0
+winner2	fcc	'GANADOR PLAYER 2'
+	fcb	0
+
+
+*******************************************************************
+*
+*	TABLERO PLAYER 1: 
+*		
+*******************************************************************
+	ORG	play1
+
+*		 1   2   3   4   5   6
+
+	fcb	___,SUB,___,CAR,___,___		; A
+	
+	fcb	___,___,___,CAR,___,___		; B
+	
+	fcb	___,___,___,___,___,SUB		; C
+	
+	fcb	___,ACZ,ACZ,ACZ,___,___		; D
+	
+	fcb	SUB,___,___,___,___,___		; E
+	
+	fcb	___,___,CAR,CAR,___,___		; F
+
+	
+*******************************************************************
+*
+*	TABLERO PLAYER 2:
+*	
+*******************************************************************
+	ORG	play2
+
+*		 1   2   3   4   5   6
+
+	fcb	___,___,___,___,SUB,___		; A
+	
+	fcb	ACZ,___,___,___,___,___		; B
+	
+	fcb	ACZ,___,___,SUB,___,CAR		; C
+	
+	fcb	ACZ,___,___,___,___,CAR		; D
+	
+	fcb	___,___,___,___,___,___		; E
+	
+	fcb	CAR,CAR,___,___,___,SUB		; F
+
+
+
+*===================================================================================================================
+
+	END
