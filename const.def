@@ -57,8 +57,11 @@ MASKCOL	equ	00111111b	; Máscara para obtener el color de una celda
 AZUL	equ	00000011b	
 AMAR	equ	00111100b
 ROJO	equ	00110000b
+NARANJA	equ	00111000b
 VERDE	equ	00001100b
 NEGRO	equ	00000000b
+GRISC	equ	00010101b   ; gris claro
+GRISO	equ	00101010b   ; gris oscuro
 BLANCO	equ	00111111b
 ROJOC	equ	00110001b	; Rojo claro
 ROSAC	equ	00111010b	; Rosa claro

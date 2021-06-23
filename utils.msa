@@ -3,28 +3,67 @@
 *************************************************************************
 	p68h11
 
-	public delay,copiado
+	public delay,copiado,reveal
 	extern bitmap
 
 $macros.def
-
+$const.def
 	rseg	CODE
 
 
-
-*####################################
-*-	T O    D O 
-*####################################
-*
-*	Revisar si meter en utils.msa y el problema de la cosntantes
-*
 *******************************************************************************************************************
-*
-* 	Subrutina copiado: Copia el contenido de una matriz a al Bitmap
+* 	Subrutina Reveal: Muestra la ubicacion de los barcos en el Bitmap
+*		- Recibe por X la posición de incio del tablero a mostrar
+*		- Hace uso de las constantes definidas en el programa para definir el tamaño de las 
+*		matrices (FIL y COL)
+*******************************************************************************************************************
+reveal	equ	*
+	
+	%BACKUP
+	
+	ldy	#bitmap			; Cargo en Y la primer celda de la matriz destino
+	ldab	#36			; Defino un contador de la cantidad de valores a copiar
+
+loop_rv	ldaa	0,X			; Copio el contenido de la celda apuntada a la celda destino
+	cmpa	#___			; comparo con agua
+	bne	case01
+	ldaa	#AZUL			; si es agua, cargo el color azul
+	staa	0,Y			; y lo muestro
+	bra	pass			; itero el loop
+
+case01	cmpa	#SUB			
+	bne	case02
+	ldaa	#GRISC			; si es submarino, cargo el color gris claro
+	staa	0,Y			; y lo muestro
+	bra	pass			; itero el loop
+
+case02	cmpa	#CAR			
+	bne	case03
+	ldaa	#NARANJA		; si es carguero, cargo el color naranja
+	staa	0,Y			; y lo muestro
+	bra	pass			; itero el loop
+
+case03	cmpa	#ACZ			
+	bne	pass
+	ldaa	#NEGRO			; si es acorazado, cargo el color negro
+	staa	0,Y			; y lo muestro
+
+pass	inx				; Apunto a las siguientes celdas de origen y destino
+	iny				
+	decb				; Decremento el contador y compruebo si terminé
+	bne	loop_rv
+
+	%RESTORE
+
+	rts
+
+
+
+*******************************************************************************************************************
+* 	Subrutina copiado: Copia el contenido de una matriz al Bitmap
 *		- Recibe por X la posición de incio del tablero por copiar
 *		- Hace uso de las constantes definidas en el programa para definir el tamaño de las 
 *		matrices (FIL y COL)
-*
 *******************************************************************************************************************
 copiado	equ	*
 	
@@ -33,13 +72,13 @@ copiado	equ	*
 	ldy	#bitmap			; Cargo en Y la primer celda de la matriz destino
 	ldab	#36			; Defino un contador de la cantidad de valores a copiar
 
-sgte	ldaa	0,X			; Copio el contenido de la celda apuntada a la celda destino 
+next01	ldaa	0,X			; Copio el contenido de la celda apuntada a la celda destino 
 	staa	0,Y			; correspondiente.
 	
 	inx				; Apunto a las siguientes celdas de origen y destino
 	iny				
 	decb				; Decremento el contador y compruebo si terminé
-	bne	sgte
+	bne	next01
 
 	%RESTORE
 
